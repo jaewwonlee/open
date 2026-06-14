@@ -1544,6 +1544,11 @@ function renderPrintLayout(items, systemMap = {}) {
 
   const cover = createPrintPage(1, "print-cover-page");
   appendPrintCoverTitleMarks(cover.trim);
+  appendPrintTextBox(
+    cover.trim,
+    "print-cover-hardcopy-title description keep-all",
+    formatHardcopyTitleBlock(META.hardcopy_title || ""),
+  );
   appendPrintPublicationInfo(cover.trim);
   root.appendChild(cover.page);
 

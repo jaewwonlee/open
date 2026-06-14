@@ -230,7 +230,7 @@
   }
 
   .print-cover-title-en {
-    transform: rotate(45deg);
+    transform: rotate(-45deg);
     transform-origin: left top;
   }
 
@@ -258,11 +258,22 @@
 
   .print-hardcopy-title {
     position: absolute;
+    left: 10mm;
+    top: 12.5mm;
+    width: 33mm;
+    font-size: 10pt;
+    line-height: 14.4pt;
+    z-index: 6;
+  }
+
+  .print-cover-hardcopy-title {
+    position: absolute;
     left: 89.357mm;
     top: 12.5mm;
     width: 33mm;
     font-size: 10pt;
     line-height: 14.4pt;
+    color: #ffffff;
     z-index: 6;
   }
 
