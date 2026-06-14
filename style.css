@@ -51,6 +51,10 @@
   white-space: pre-line;
 }
 
+#printRoot {
+  display: none;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

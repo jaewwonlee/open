@@ -1,0 +1,474 @@
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+@page print-front {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    background: #ffffff;
+    color: #000000;
+    overflow: visible;
+    font-family: "Pretendard", Arial, "Noto Sans KR", sans-serif;
+    font-weight: 700;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-arial {
+    font-family: Arial, sans-serif;
+  }
+
+  body > :not(#printRoot) {
+    display: none !important;
+  }
+
+  #printRoot {
+    display: block;
+  }
+
+  .print-page {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    page: auto;
+    page-break-after: always;
+    break-after: page;
+    background: #ffffff;
+    color: #000000;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    text-align: left;
+    word-break: keep-all;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .print-trim {
+    position: absolute;
+    top: 0;
+    width: var(--trim-width);
+    height: 210mm;
+    box-sizing: border-box;
+  }
+
+  .print-odd .print-trim {
+    left: 0;
+  }
+
+  .print-even .print-trim {
+    right: 0;
+  }
+
+  .print-trim-line {
+    position: absolute;
+    top: 0;
+    width: 1mm;
+    height: 210mm;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .print-odd:not(.print-front-page) .print-trim-line {
+    right: -0.5mm;
+  }
+
+  .print-even:not(.print-front-page) .print-trim-line {
+    left: -0.5mm;
+  }
+
+  .print-front-page {
+    page: print-front;
+    width: 210mm;
+    height: 297mm;
+  }
+
+  .print-front-page .print-trim {
+    left: 36.5mm;
+    top: 43.5mm;
+    width: 137mm;
+    height: 210mm;
+  }
+
+  .print-front-page .print-trim-line {
+    display: none;
+  }
+
+  .print-front-bleed {
+    position: absolute;
+    left: -3mm;
+    top: -3mm;
+    width: 143mm;
+    height: 216mm;
+    background: #1155cc;
+    z-index: 0;
+  }
+
+  .print-front-marks {
+    position: absolute;
+    left: -36.5mm;
+    top: -43.5mm;
+    z-index: 4;
+    overflow: visible;
+  }
+
+  .print-binding-holes {
+    position: absolute;
+    top: 12.25mm;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 4.5mm;
+    width: 5mm;
+  }
+
+  .print-odd .print-binding-holes {
+    left: 7.5mm;
+  }
+
+  .print-even .print-binding-holes {
+    right: 7.5mm;
+  }
+
+  .print-binding-hole {
+    display: block;
+    width: 5mm;
+    height: 5mm;
+    flex: 0 0 5mm;
+    border-radius: 50%;
+    background: #000000;
+  }
+
+  .print-web-circles {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 3;
+    overflow: visible;
+  }
+
+  .print-web-circles circle {
+    fill: none;
+    stroke: #000000;
+    stroke-width: 0.2pt;
+  }
+
+  .print-front-page .print-web-circles {
+    z-index: 6;
+  }
+
+  .print-front-page .print-web-circles circle {
+    fill: #ffffff;
+    stroke: #000000;
+  }
+
+  .print-front-page .print-web-circles-partial circle {
+    stroke: none;
+  }
+
+  .print-web-circles-bottom {
+    top: 95.5mm;
+  }
+
+  .print-cover-placeholder {
+    display: none;
+  }
+
+  .print-hardcopy-title {
+    position: absolute;
+    left: 10mm;
+    top: 12.5mm;
+    width: 33mm;
+    font-size: 10pt;
+    line-height: 14.4pt;
+    z-index: 6;
+  }
+
+  .print-front-page .print-hardcopy-title,
+  .print-front-page .print-hardcopy-category-ko,
+  .print-front-page .print-hardcopy-category-en,
+  .print-front-page .print-project-description {
+    color: #ffffff;
+  }
+
+  .print-hardcopy-category-ko,
+  .print-hardcopy-category-en {
+    position: absolute;
+    top: 33.8mm;
+    width: 15mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    z-index: 6;
+  }
+
+  .print-hardcopy-category-ko {
+    left: 10mm;
+  }
+
+  .print-hardcopy-category-en {
+    left: 25mm;
+  }
+
+  .print-project-description {
+    position: absolute;
+    left: 47mm;
+    top: 12.5mm;
+    width: 70mm;
+    height: 70mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    z-index: 6;
+  }
+
+  .print-system-dictionary {
+    position: absolute;
+    left: 20mm;
+    top: 12.25mm;
+    width: 63.714mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-system-dots {
+    position: absolute;
+    left: 20mm;
+    top: 20.251mm;
+    display: flex;
+    flex-direction: column;
+    gap: 6.517mm;
+    width: 5mm;
+  }
+
+  .print-system-dots span {
+    display: block;
+    width: 5mm;
+    height: 5mm;
+    border: 0.2pt dashed #000000;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+
+  .print-system-concept-title {
+    position: absolute;
+    left: 27.875mm;
+    width: 38.911mm;
+    height: 11.571mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 14.4pt;
+  }
+
+  .print-system-concept-description {
+    position: absolute;
+    left: 70.786mm;
+    width: 63.714mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-system-classification {
+    position: absolute;
+    left: 20mm;
+    top: 84.569mm;
+    width: 114.5mm;
+    height: 40.499mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    overflow: hidden;
+  }
+
+  .print-category-type-title {
+    position: absolute;
+    left: 20mm;
+    top: 127.961mm;
+    width: 46.786mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .print-category-type-ko,
+  .print-category-type-en {
+    position: absolute;
+    top: 133.747mm;
+    height: 40.499mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    overflow: hidden;
+  }
+
+  .print-category-type-ko {
+    left: 20mm;
+    width: 12.929mm;
+  }
+
+  .print-category-type-en {
+    left: 36.929mm;
+    width: 29.857mm;
+  }
+
+  .print-directionality,
+  .print-stage {
+    position: absolute;
+    left: 70.786mm;
+    width: 63.714mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-directionality {
+    top: 127.961mm;
+  }
+
+  .print-stage {
+    top: 153.996mm;
+  }
+
+  .print-score-title {
+    position: absolute;
+    left: 20mm;
+    top: 180.031mm;
+    width: 57.25mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-score-description-left,
+  .print-score-description-right {
+    position: absolute;
+    top: 185.817mm;
+    width: 57.25mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-score-description-left {
+    left: 20mm;
+  }
+
+  .print-score-description-right {
+    left: 77.25mm;
+  }
+
+  .print-items-list {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--trim-width);
+    height: 210mm;
+  }
+
+  .print-item {
+    position: absolute;
+    left: 0;
+    width: var(--trim-width);
+  }
+
+  .print-item-top {
+    top: 12.5mm;
+  }
+
+  .print-item-bottom {
+    top: 107.75mm;
+  }
+
+  .print-item-title {
+    position: absolute;
+    left: 10mm;
+    top: 0;
+    width: 33mm;
+    height: 11.571mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 14.4pt;
+  }
+
+  .print-item-description {
+    position: absolute;
+    left: 45mm;
+    top: 0;
+    width: calc(var(--trim-width) - 65mm);
+    min-height: 11.571mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-item-category-ko,
+  .print-item-category-en {
+    position: absolute;
+    top: 21.3mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-item-category-ko {
+    left: 10mm;
+    width: 15mm;
+  }
+
+  .print-item-category-en {
+    left: 25mm;
+    width: 15mm;
+  }
+
+  .print-compare-box {
+    position: absolute;
+    width: 25mm;
+    font-size: 10pt;
+    line-height: 16.4pt;
+  }
+
+  .print-compare-top {
+    top: 12.5mm;
+  }
+
+  .print-compare-bottom {
+    top: 107.75mm;
+  }
+
+  .print-compare-box-1 {
+    left: 20mm;
+  }
+
+  .print-compare-box-2 {
+    left: 49mm;
+  }
+
+  .print-compare-box-3 {
+    left: 78mm;
+  }
+
+  .print-compare-box-4 {
+    left: 107mm;
+  }
+
+  .description {
+    white-space: pre-line;
+  }
+
+  .print-blue {
+    color: #1155cc;
+  }
+
+  .print-gray {
+    color: #dedede;
+  }
+
+  .keep-all {
+    word-break: keep-all;
+  }
+}

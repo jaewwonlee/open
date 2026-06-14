@@ -8,6 +8,7 @@ const CMS = {
     alphabet: "679225347",
     kerning: "512332723",
     alphabetTape: "694504731",
+    system: "1121970842",
   },
   imageJsonUrls: ["./images.json"],
   suggestPostUrl:
@@ -341,6 +342,27 @@ function buildMeta(rows) {
   return meta;
 }
 
+function buildSystemMap(rows) {
+  const map = {};
+
+  rows.forEach((row) => {
+    const key =
+      row.key ||
+      row.id ||
+      row.name ||
+      row.term ||
+      row.category ||
+      row.type ||
+      "";
+    const normalizedKey = String(key).trim();
+
+    if (!normalizedKey) return;
+    map[normalizedKey] = row;
+  });
+
+  return map;
+}
+
 function applyMeta(meta) {
   document.getElementById("nav-open").textContent =
     meta.nav_open || "오픈";
@@ -372,6 +394,565 @@ function applyMeta(meta) {
   descriptionText.textContent = researchDescription;
 
   document.title = meta.site_title || "**WELCOME TO OPEN**";
+}
+
+function getScreenDescription(text) {
+  return String(text || "").split(/\r?\n/)[0] || "";
+}
+
+function formatPrintTitle(title) {
+  const value = normalizePrintText(title).trim();
+  if (value.includes("\n")) return value;
+
+  const match = value.match(/^(.+?)\s+([A-Za-z][A-Za-z0-9.,?!;:“”‘’\-\s]*)$/);
+  if (!match) return value;
+
+  return `${match[1].trim()}\n${match[2].trim()}`;
+}
+
+function getPrintOrder(row) {
+  const raw =
+    row.print_order ||
+    row.printOrder ||
+    row["print order"] ||
+    row["Print Order"] ||
+    "";
+  const value = Number.parseFloat(String(raw).trim());
+
+  return Number.isFinite(value) ? value : Infinity;
+}
+
+function getTrimWidth(pageNumber) {
+  return 137 + Math.floor((pageNumber - 1) / 2) * 7.5;
+}
+
+function createPrintEl(tag, className = "", text = "") {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text) el.textContent = normalizePrintText(text);
+  return el;
+}
+
+function appendPrintTextRun(parent, text) {
+  const normalized = normalizePrintText(text);
+  const arialPattern = /[A-Za-z0-9.,?!;:“”‘’]+/g;
+  let cursor = 0;
+  let match;
+
+  while ((match = arialPattern.exec(normalized))) {
+    if (match.index > cursor) {
+      parent.appendChild(
+        document.createTextNode(normalized.slice(cursor, match.index)),
+      );
+    }
+
+    const span = createPrintEl("span", "print-arial");
+    span.textContent = match[0];
+    parent.appendChild(span);
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < normalized.length) {
+    parent.appendChild(document.createTextNode(normalized.slice(cursor)));
+  }
+}
+
+function setPrintText(el, text) {
+  el.textContent = "";
+  appendPrintTextRun(el, text);
+}
+
+function normalizePrintText(text) {
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "");
+}
+
+function getRecordText(record, field) {
+  if (!record) return "";
+  return normalizePrintText(record[field] || record[field.toLowerCase()] || "");
+}
+
+function getKoEn(record) {
+  const ko = getRecordText(record, "ko");
+  const en = getRecordText(record, "en");
+  return [ko, en].filter(Boolean).join(" ");
+}
+
+function getMetaLowercase(key) {
+  const explicit = META[`${key}_lowcase`];
+  const fallback = META[key];
+
+  return explicit || String(fallback || "").toLowerCase();
+}
+
+function appendPrintLines(parent, className, lines) {
+  const box = createPrintEl("div", className);
+
+  lines.forEach((line) => {
+    const item = createPrintEl("div", line.className || "");
+    setPrintText(item, line.text || "");
+    box.appendChild(item);
+  });
+
+  parent.appendChild(box);
+
+  return box;
+}
+
+function createPrintBindingHoles(pageNumber) {
+  const holes = createPrintEl("div", "print-binding-holes");
+
+  for (let i = 0; i < 20; i++) {
+    holes.appendChild(createPrintEl("span", "print-binding-hole"));
+  }
+
+  return holes;
+}
+
+function createPrintTrimLine() {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  const line = document.createElementNS(svgNS, "line");
+
+  svg.setAttribute("class", "print-trim-line");
+  svg.setAttribute("viewBox", "0 0 1 210");
+  svg.setAttribute("width", "1mm");
+  svg.setAttribute("height", "210mm");
+  svg.setAttribute("aria-hidden", "true");
+
+  line.setAttribute("x1", "0.5");
+  line.setAttribute("y1", "0");
+  line.setAttribute("x2", "0.5");
+  line.setAttribute("y2", "210");
+  line.setAttribute("stroke", "#000000");
+  line.setAttribute("stroke-width", "0.2pt");
+  line.setAttribute("stroke-dasharray", "1 1");
+  line.setAttribute("vector-effect", "non-scaling-stroke");
+
+  svg.appendChild(line);
+
+  return svg;
+}
+
+function createPrintFrontMarks() {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  const paths = [
+    "M25.5 43.5 H33.5 M36.5 32.5 V40.5",
+    "M176.5 43.5 H184.5 M173.5 32.5 V40.5",
+    "M25.5 253.5 H33.5 M36.5 256.5 V264.5",
+    "M176.5 253.5 H184.5 M173.5 256.5 V264.5",
+    "M25.5 40.5 H33.5 M33.5 32.5 V40.5",
+    "M176.5 40.5 H184.5 M176.5 32.5 V40.5",
+    "M25.5 256.5 H33.5 M33.5 256.5 V264.5",
+    "M176.5 256.5 H184.5 M176.5 256.5 V264.5",
+  ];
+
+  svg.setAttribute("class", "print-front-marks");
+  svg.setAttribute("viewBox", "0 0 210 297");
+  svg.setAttribute("width", "210mm");
+  svg.setAttribute("height", "297mm");
+  svg.setAttribute("aria-hidden", "true");
+
+  paths.forEach((d, index) => {
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#000000");
+    path.setAttribute("stroke-width", "0.2pt");
+    if (index >= 4) path.setAttribute("stroke-dasharray", "1 1");
+    svg.appendChild(path);
+  });
+
+  return svg;
+}
+
+function createPrintWebCircles() {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  const circles = [
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 2.95 },
+    { d: 3.3, gapAfter: 2.95 },
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 2.1 },
+    { d: 5, gapAfter: 0 },
+  ];
+  let cy = 14.75;
+
+  svg.setAttribute("class", "print-web-circles");
+  svg.setAttribute("viewBox", "0 0 8 80");
+  svg.setAttribute("width", "8mm");
+  svg.setAttribute("height", "80mm");
+  svg.setAttribute("aria-hidden", "true");
+
+  circles.forEach((item) => {
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", "3.75");
+    circle.setAttribute("cy", String(cy));
+    circle.setAttribute("r", String(item.d / 2 - 0.035));
+    circle.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.appendChild(circle);
+    const next = circles[svg.childNodes.length];
+    if (next) cy += item.d / 2 + item.gapAfter + next.d / 2;
+  });
+
+  return svg;
+}
+
+function setPrintWebCirclesFill(svg, fill) {
+  svg.querySelectorAll("circle").forEach((circle) => {
+    circle.setAttribute("fill", fill);
+  });
+}
+
+function createPrintPartialWebCircles() {
+  const svg = createPrintWebCircles();
+  svg.classList.add("print-web-circles-partial");
+  setPrintWebCirclesFill(svg, "#ffffff");
+
+  Array.from(svg.querySelectorAll("circle")).forEach((circle, index) => {
+    if (index === 1 || index === 2) circle.remove();
+  });
+
+  return svg;
+}
+
+function createPrintPage(pageNumber, type = "") {
+  const page = createPrintEl("section", `print-page ${type}`);
+  const trim = createPrintEl("div", "print-trim");
+
+  page.dataset.page = String(pageNumber);
+  page.style.setProperty("--trim-width", `${getTrimWidth(pageNumber)}mm`);
+  page.classList.add(pageNumber % 2 ? "print-odd" : "print-even");
+
+  if (pageNumber <= 2) {
+    page.classList.add("print-front-page");
+    trim.appendChild(createPrintEl("div", "print-front-bleed"));
+    trim.appendChild(createPrintFrontMarks());
+  }
+
+  trim.appendChild(createPrintTrimLine());
+  trim.appendChild(createPrintBindingHoles(pageNumber));
+  if (pageNumber === 2) {
+    trim.appendChild(createPrintPartialWebCircles());
+  }
+  if (pageNumber > 2 && pageNumber % 2 === 0) {
+    trim.appendChild(createPrintWebCircles());
+    const bottomCircles = createPrintWebCircles();
+    bottomCircles.classList.add("print-web-circles-bottom");
+    trim.appendChild(bottomCircles);
+  }
+
+  page.appendChild(trim);
+
+  return { page, trim };
+}
+
+function appendPrintTextBox(parent, className, text) {
+  const box = createPrintEl("div", className);
+  setPrintText(box, text);
+  parent.appendChild(box);
+
+  return box;
+}
+
+function getSystemCategoryRows(systemMap) {
+  return [
+    "category_type_concept",
+    "category_type_tech",
+    "category_type_digital",
+    "category_type_media",
+    "category_type_place",
+    "category_type_action",
+    "category_type_etc",
+  ].map((key) => ({
+    key,
+    ko: getRecordText(systemMap[key], "ko"),
+    en: getRecordText(systemMap[key], "en"),
+  }));
+}
+
+function getItemCategoryLines(item, systemMap, lang = "ko") {
+  const categoryRows = getSystemCategoryRows(systemMap);
+  const rawCategories = String(item.category || "")
+    .split(",")
+    .map((category) => category.trim())
+    .filter(Boolean);
+
+  return rawCategories
+    .map((category) => {
+      const row = categoryRows.find((entry) => entry.ko === category);
+      return lang === "en" ? row?.en || "" : row?.ko || category;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function getCompareValues(item, lang = "ko") {
+  const suffix = lang === "en" ? "_en" : "";
+
+  return [
+    item[`cost${suffix}`] || item.cost,
+    item[`directionality${suffix}`] || item.directionality,
+    item[`temporality${suffix}`] || item.temporality,
+    item[`stage${suffix}`] || item.stage,
+    item.open_score,
+  ]
+    .filter((value) => value !== undefined && value !== null)
+    .join("\n");
+}
+
+function appendPrintItemCategories(row, item, systemMap) {
+  appendPrintTextBox(
+    row,
+    "print-item-category-ko description keep-all",
+    getItemCategoryLines(item, systemMap, "ko"),
+  );
+  appendPrintTextBox(
+    row,
+    "print-item-category-en description keep-all",
+    getItemCategoryLines(item, systemMap, "en"),
+  );
+}
+
+function appendPrintCompareBoxes(trim, item, yClass) {
+  const labelsKo = [
+    META.compare_label_2 || "비용",
+    META.compare_label_3 || "방향성",
+    META.compare_label_4 || "시간성",
+    META.compare_label_5 || "단계",
+    META.compare_label_6 || "오픈 스코어",
+  ].join("\n");
+  const labelsEn = [
+    META.compare_label_en_2 || "Cost",
+    META.compare_label_en_3 || "Directionality",
+    META.compare_label_en_4 || "Temporality",
+    META.compare_label_en_5 || "Stage",
+    META.compare_label_en_6 || "Open Score",
+  ].join("\n");
+
+  [
+    ["print-compare-box-1", labelsKo],
+    ["print-compare-box-2", getCompareValues(item, "ko")],
+    ["print-compare-box-3", labelsEn],
+    ["print-compare-box-4", getCompareValues(item, "en")],
+  ].forEach(([className, text]) => {
+    appendPrintTextBox(
+      trim,
+      `print-compare-box ${className} ${yClass} description keep-all`,
+      text,
+    );
+  });
+}
+
+function renderPrintSystemPage(trim, systemMap) {
+  const conceptKeys = [
+    "openness",
+    "sharing",
+    "participation",
+    "contribution",
+    "collaboration",
+  ];
+  const conceptY = [18.036, 29.607, 41.178, 52.749, 64.32];
+  const categoryRows = getSystemCategoryRows(systemMap);
+  const scoreDescription = getRecordText(systemMap.score, "description")
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "");
+  const directionalityRecord =
+    systemMap.directionality || systemMap.dirctionality || {};
+
+  appendPrintTextBox(
+    trim,
+    "print-system-dictionary description keep-all print-blue",
+    getKoEn(systemMap.dictionary_definition),
+  );
+
+  const dots = createPrintEl("div", "print-system-dots");
+  for (let i = 0; i < 5; i++) dots.appendChild(createPrintEl("span"));
+  trim.appendChild(dots);
+
+  conceptKeys.forEach((key, index) => {
+    const record = systemMap[key] || {};
+    const title = appendPrintTextBox(
+      trim,
+      "print-system-concept-title description keep-all",
+      [getRecordText(record, "ko"), getRecordText(record, "en")]
+        .filter(Boolean)
+        .join("\n"),
+    );
+    title.style.top = `${conceptY[index]}mm`;
+
+    const desc = appendPrintTextBox(
+      trim,
+      "print-system-concept-description description keep-all",
+      getRecordText(record, "description"),
+    );
+    desc.style.top = `${conceptY[index]}mm`;
+  });
+
+  appendPrintLines(trim, "print-system-classification description keep-all", [
+    {
+      text: getKoEn(systemMap.classification),
+      className: "print-blue",
+    },
+    {
+      text: getRecordText(systemMap.classification_open, "ko"),
+      className: "print-blue",
+    },
+    {
+      text: getRecordText(systemMap.classification_open, "en"),
+      className: "print-blue",
+    },
+    { text: getRecordText(systemMap.classification_public, "ko") },
+    { text: getRecordText(systemMap.classification_public, "en") },
+    {
+      text: getRecordText(systemMap.classification_na, "ko"),
+      className: "print-gray",
+    },
+    {
+      text: getRecordText(systemMap.classification_na, "en"),
+      className: "print-gray",
+    },
+  ]);
+
+  appendPrintTextBox(
+    trim,
+    "print-category-type-title keep-all print-blue",
+    getKoEn(systemMap.category_type),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-category-type-ko description keep-all",
+    categoryRows.map((row) => row.ko).join("\n"),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-category-type-en description keep-all",
+    categoryRows.map((row) => row.en).join("\n"),
+  );
+
+  appendPrintLines(trim, "print-directionality description keep-all", [
+    { text: getKoEn(directionalityRecord), className: "print-blue" },
+    { text: getRecordText(directionalityRecord, "description") },
+  ]);
+
+  appendPrintLines(trim, "print-stage description keep-all", [
+    { text: getKoEn(systemMap.stage), className: "print-blue" },
+    { text: getRecordText(systemMap.stage, "description") },
+  ]);
+
+  appendPrintTextBox(
+    trim,
+    "print-score-title keep-all print-blue",
+    getKoEn(systemMap.score),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-score-description-left description keep-all",
+    scoreDescription.slice(0, 2).join("\n"),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-score-description-right description keep-all",
+    scoreDescription.slice(2).join("\n"),
+  );
+}
+
+function renderPrintLayout(items, systemMap = {}) {
+  const root = document.getElementById("printRoot");
+  if (!root) return;
+
+  root.innerHTML = "";
+
+  const cover = createPrintPage(1, "print-cover-page");
+  root.appendChild(cover.page);
+
+  const project = createPrintPage(2, "print-project-page");
+  appendPrintTextBox(
+    project.trim,
+    "print-hardcopy-title description keep-all",
+    META.hardcopy_title || "",
+  );
+  appendPrintTextBox(
+    project.trim,
+    "print-hardcopy-category-ko description keep-all",
+    "개념\n디지털\n매체\n행위",
+  );
+  appendPrintTextBox(
+    project.trim,
+    "print-hardcopy-category-en description keep-all",
+    [
+      getMetaLowercase("category_word_concept"),
+      getMetaLowercase("category_word_digital"),
+      getMetaLowercase("category_word_media"),
+      getMetaLowercase("category_word_ACTION") ||
+        getMetaLowercase("category_word_action"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+  appendPrintTextBox(
+    project.trim,
+    "print-project-description description keep-all",
+    META.research_description || "",
+  );
+  root.appendChild(project.page);
+
+  const book = createPrintPage(3, "print-book-page");
+  renderPrintSystemPage(book.trim, systemMap);
+  root.appendChild(book.page);
+
+  const printItems = [...items]
+    .filter((item) => Number.isFinite(item.printOrder))
+    .sort((a, b) => a.printOrder - b.printOrder);
+
+  for (let i = 0; i < printItems.length; i += 2) {
+    const pageNumber = 4 + i;
+    const itemPage = createPrintPage(pageNumber, "print-items-page");
+    const list = createPrintEl("div", "print-items-list");
+
+    const spreadItems = printItems.slice(i, i + 2);
+
+    spreadItems.forEach((item) => {
+      const row = createPrintEl("article", "print-item");
+      row.classList.add(
+        list.children.length === 0 ? "print-item-top" : "print-item-bottom",
+      );
+      appendPrintTextBox(
+        row,
+        "print-item-title keep-all",
+        formatPrintTitle(item.title || ""),
+      );
+      appendPrintTextBox(
+        row,
+        "print-item-description description keep-all",
+        item.description || "",
+      );
+      appendPrintItemCategories(row, item, systemMap);
+      list.appendChild(row);
+    });
+
+    itemPage.trim.appendChild(list);
+    root.appendChild(itemPage.page);
+
+    const comparePage = createPrintPage(pageNumber + 1, "print-compare-page");
+    if (spreadItems[0]) {
+      appendPrintCompareBoxes(comparePage.trim, spreadItems[0], "print-compare-top");
+    }
+    if (spreadItems[1]) {
+      appendPrintCompareBoxes(
+        comparePage.trim,
+        spreadItems[1],
+        "print-compare-bottom",
+      );
+    }
+    root.appendChild(comparePage.page);
+  }
 }
 
 function getTopClassification(data) {
@@ -609,7 +1190,7 @@ const categoryWordKeyMap = {
   개념: "category_word_concept",
   기술: "category_word_technology",
   디지털: "category_word_digital",
-  매체: "category_word_medium",
+  매체: "category_word_media",
   장소: "category_word_place",
   행위: "category_word_action",
   기타: "category_word_etc",
@@ -619,7 +1200,7 @@ const categoryWordFallbackMap = {
   개념: "CONCEPT",
   기술: "TECHNOLOGY",
   디지털: "DIGITAL",
-  매체: "MEDIUM",
+  매체: "MEDIA",
   장소: "PLACE",
   행위: "ACTION",
   기타: "ETC",
@@ -961,7 +1542,7 @@ function createTopCol(data) {
   <div class="info-row ${classification.isNone ? "" : "inactive"}">${classification.isNone ? getTopNote(classification) : ""}</div>
   <div class="info-row">${data.category || ""}</div>
   <div class="info-row ${classification.isOpen ? "open-blue" : ""}">${data.title || ""}</div>
-  <div class="info-row title-desc-box top-description-box keep-all">${data.description || ""}</div>
+  <div class="info-row title-desc-box top-description-box keep-all">${getScreenDescription(data.description)}</div>
 </div>
     `;
 
@@ -1420,6 +2001,7 @@ async function initCMS() {
       alphabetRows,
       kerningRows,
       alphabetTapeRows,
+      systemRows,
       imageMap,
     ] = await Promise.all([
       loadCSV(CMS.gids.meta),
@@ -1429,10 +2011,12 @@ async function initCMS() {
       loadOptionalCSV(CMS.gids.alphabet),
       loadOptionalCSV(CMS.gids.kerning),
       loadOptionalCSV(CMS.gids.alphabetTape),
+      loadOptionalCSV(CMS.gids.system),
       loadImageJSON(),
     ]);
 
     META = buildMeta(metaRows);
+    const systemMap = buildSystemMap(systemRows);
     applyMeta(META);
     cachedAlphabetTapeRows = alphabetTapeRows;
     cachedAlphabetPatternMap = buildAlphabetPatternMap(alphabetRows);
@@ -1448,6 +2032,7 @@ async function initCMS() {
       id: row.id,
       title: row.title,
       description: row.description,
+      printOrder: getPrintOrder(row),
       category: row.category,
       openness: toBool(row.openness),
       sharing: toBool(row.sharing),
@@ -1472,6 +2057,14 @@ async function initCMS() {
 
       compareTape.appendChild(createCompareCol(compareData));
     });
+
+    renderPrintLayout(
+      items.map((item) => ({
+        ...item,
+        ...(compareById[item.id] || {}),
+      })),
+      systemMap,
+    );
 
     suggestionRows
       .map(normalizeSuggestionRow)
