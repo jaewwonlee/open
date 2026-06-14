@@ -690,35 +690,63 @@ function getHardcopyPattern(char, mode = "first") {
   return fallbackPatterns[value] || [];
 }
 
-function createHardcopyHoleText(text, className = "print-hardcopy-code") {
-  const svgNS = "http://www.w3.org/2000/svg";
+function pickAlphabetPatternByLabel(letter, label) {
+  const key = String(letter || "").toUpperCase();
+  const targetLabel = String(label || "")
+    .trim()
+    .toUpperCase();
+  const options = cachedAlphabetPatternMap[key] || [];
+
+  return (
+    options.find(
+      (option) =>
+        String(option.label || "")
+          .trim()
+          .toUpperCase() === targetLabel,
+    ) || null
+  );
+}
+
+function getHardcopyGlyphColumns(glyphs) {
   const columns = [];
 
-  normalizePrintText(text)
-    .split("")
-    .forEach((char) => {
-      if (char === "\n") return;
-      if (char === " ") {
-        columns.push("00000", "00000");
-        return;
-      }
+  glyphs.forEach((glyph, index) => {
+    const selected = glyph.label
+      ? pickAlphabetPatternByLabel(glyph.char, glyph.label)
+      : pickAlphabetPattern(
+          glyph.char,
+          cachedAlphabetPatternMap || {},
+          glyph.mode || "first",
+        );
+    const pattern =
+      selected?.pattern?.split("/") || getHardcopyPattern(glyph.char);
 
-      const pattern = getHardcopyPattern(char);
-      if (!pattern.length) return;
-      columns.push(...pattern, "00000");
-    });
+    if (!pattern.length) return;
+    columns.push(...pattern);
+    if (index < glyphs.length - 1) columns.push("00000");
+  });
 
-  if (columns.length && columns[columns.length - 1] === "00000") {
-    columns.pop();
-  }
+  return columns;
+}
 
-  const width = columns.length
-    ? columns.length * PRINT_HOLE_SIZE + (columns.length - 1) * PRINT_HOLE_GAP
-    : PRINT_HOLE_SIZE;
+function createHardcopyHoleSvgFromColumns(
+  columns,
+  className = "print-hardcopy-code",
+) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const normalizedColumns = columns.length ? columns : ["00000"];
+  const width =
+    normalizedColumns.length * PRINT_HOLE_SIZE +
+    (normalizedColumns.length - 1) * PRINT_HOLE_GAP;
   const height = 5 * PRINT_HOLE_SIZE + 4 * PRINT_HOLE_GAP;
-  const svg = createPrintSvg(className, `0 0 ${width} ${height}`, `${width}mm`, `${height}mm`);
+  const svg = createPrintSvg(
+    className,
+    `0 0 ${width} ${height}`,
+    `${width}mm`,
+    `${height}mm`,
+  );
 
-  columns.forEach((bits, colIndex) => {
+  normalizedColumns.forEach((bits, colIndex) => {
     String(bits || "00000")
       .padEnd(5, "0")
       .slice(0, 5)
@@ -739,7 +767,48 @@ function createHardcopyHoleText(text, className = "print-hardcopy-code") {
       });
   });
 
+  svg.dataset.hardcopyWidth = String(width);
+  svg.dataset.hardcopyHeight = String(height);
+
   return svg;
+}
+
+function createHardcopyHoleText(text, className = "print-hardcopy-code") {
+  const columns = [];
+
+  normalizePrintText(text)
+    .split("")
+    .forEach((char) => {
+      if (char === "\n") return;
+      if (char === " ") {
+        columns.push("00000", "00000");
+        return;
+      }
+
+      const pattern = getHardcopyPattern(char);
+      if (!pattern.length) return;
+      columns.push(...pattern, "00000");
+    });
+
+  if (columns.length && columns[columns.length - 1] === "00000") {
+    columns.pop();
+  }
+
+  return createHardcopyHoleSvgFromColumns(columns, className);
+}
+
+function createHardcopyHoleGlyphs(glyphs, className = "print-hardcopy-code") {
+  return createHardcopyHoleSvgFromColumns(
+    getHardcopyGlyphColumns(glyphs),
+    className,
+  );
+}
+
+function createHardcopyArrow(className = "print-hardcopy-code") {
+  const pattern = pickAlphabetPattern("→", cachedAlphabetPatternMap || {}, "first");
+  if (!pattern?.pattern) return null;
+
+  return createHardcopyHoleSvgFromColumns(pattern.pattern.split("/"), className);
 }
 
 function createHardcopyPageNumber(pageNumber) {
@@ -804,6 +873,35 @@ function appendPrintCoverCode(trim, className = "print-hardcopy-code") {
 
   const code = createHardcopyHoleText(text, className);
   trim.appendChild(code);
+}
+
+function appendPrintCoverTitleMarks(trim) {
+  const koTitle = createHardcopyHoleText("오픈", "print-cover-title-ko");
+  koTitle.style.left = "20mm";
+  koTitle.style.top = "12.5mm";
+  trim.appendChild(koTitle);
+
+  const enTitle = createHardcopyHoleGlyphs(
+    [
+      { char: "O", label: "O_1" },
+      { char: "P", label: "P_1" },
+      { char: "E", label: "E_1" },
+      { char: "N", label: "N_1" },
+    ],
+    "print-cover-title-en",
+  );
+  enTitle.style.left = "10mm";
+  enTitle.style.top = "131.852mm";
+  trim.appendChild(enTitle);
+
+  const arrow = createHardcopyArrow("print-cover-arrow");
+  if (!arrow) return;
+
+  const width = Number.parseFloat(arrow.dataset.hardcopyWidth || "0");
+  const height = Number.parseFloat(arrow.dataset.hardcopyHeight || "0");
+  arrow.style.left = `${127 - width}mm`;
+  arrow.style.top = `${150.447 - height / 2}mm`;
+  trim.appendChild(arrow);
 }
 
 function getQrFormatBits(mask) {
@@ -1046,6 +1144,13 @@ function appendPrintTextBox(parent, className, text) {
   parent.appendChild(box);
 
   return box;
+}
+
+function formatHardcopyTitleBlock(text) {
+  const formatted = formatPrintTitle(text);
+  const { ko, en } = splitPrintKoEnText(formatted);
+
+  return [ko, "", en].filter((line, index) => index === 1 || line).join("\n");
 }
 
 function splitPrintKoEnText(text) {
@@ -1438,7 +1543,7 @@ function renderPrintLayout(items, systemMap = {}) {
   root.innerHTML = "";
 
   const cover = createPrintPage(1, "print-cover-page");
-  appendPrintCoverCode(cover.trim);
+  appendPrintCoverTitleMarks(cover.trim);
   appendPrintPublicationInfo(cover.trim);
   root.appendChild(cover.page);
 
@@ -1446,7 +1551,7 @@ function renderPrintLayout(items, systemMap = {}) {
   appendPrintTextBox(
     project.trim,
     "print-hardcopy-title description keep-all",
-    META.hardcopy_title || "",
+    formatHardcopyTitleBlock(META.hardcopy_title || ""),
   );
   appendPrintTextBox(
     project.trim,

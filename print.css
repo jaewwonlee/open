@@ -198,7 +198,10 @@
 
   .print-hardcopy-code,
   .print-back-cover-code,
-  .print-page-number-code {
+  .print-page-number-code,
+  .print-cover-title-ko,
+  .print-cover-title-en,
+  .print-cover-arrow {
     position: absolute;
     overflow: visible;
     z-index: 6;
@@ -219,8 +222,16 @@
   }
 
   .print-hardcopy-code circle,
+  .print-cover-title-ko circle,
+  .print-cover-title-en circle,
+  .print-cover-arrow circle,
   .print-qrcode rect {
     fill: #ffffff;
+  }
+
+  .print-cover-title-en {
+    transform: rotate(45deg);
+    transform-origin: left top;
   }
 
   .print-back-cover-code circle {
@@ -247,7 +258,7 @@
 
   .print-hardcopy-title {
     position: absolute;
-    left: 10mm;
+    left: 89.357mm;
     top: 12.5mm;
     width: 33mm;
     font-size: 10pt;
