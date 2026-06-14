@@ -401,8 +401,28 @@ function getScreenDescription(text) {
 }
 
 function formatPrintTitle(title) {
-  const value = normalizePrintText(title).trim();
-  if (value.includes("\n")) return value;
+  const value = normalizePrintText(title)
+    .trim()
+    .replace(/\n{2,}/g, "\n");
+  if (value.includes("\n")) {
+    const lines = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const englishStart = lines.findIndex(
+      (line, index) =>
+        index > 0 && /[A-Za-z]/.test(line) && !/[가-힣]/.test(line),
+    );
+
+    if (englishStart > 0) {
+      return [
+        lines.slice(0, englishStart).join(" "),
+        lines.slice(englishStart).join(" "),
+      ].join("\n");
+    }
+
+    return lines.join("\n");
+  }
 
   const match = value.match(/^(.+?)\s+([A-Za-z][A-Za-z0-9.,?!;:“”‘’\-\s]*)$/);
   if (!match) return value;
@@ -540,7 +560,7 @@ function createPrintTrimLine() {
   line.setAttribute("x2", "0.5");
   line.setAttribute("y2", "210");
   line.setAttribute("stroke", "#000000");
-  line.setAttribute("stroke-width", "0.2pt");
+  line.setAttribute("stroke-width", "0.0706");
   line.setAttribute("stroke-dasharray", "1 1");
   line.setAttribute("vector-effect", "non-scaling-stroke");
 
@@ -574,7 +594,7 @@ function createPrintFrontMarks() {
     path.setAttribute("d", d);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", "#000000");
-    path.setAttribute("stroke-width", "0.2pt");
+    path.setAttribute("stroke-width", "0.0706");
     if (index >= 4) path.setAttribute("stroke-dasharray", "1 1");
     svg.appendChild(path);
   });
@@ -1118,7 +1138,6 @@ function createPrintPage(pageNumber, type = "") {
   if (pageNumber <= 2) {
     page.classList.add("print-front-page");
     trim.appendChild(createPrintEl("div", "print-front-bleed"));
-    trim.appendChild(createPrintFrontMarks());
   }
 
   trim.appendChild(createPrintTrimLine());
@@ -1147,10 +1166,7 @@ function appendPrintTextBox(parent, className, text) {
 }
 
 function formatHardcopyTitleBlock(text) {
-  const formatted = formatPrintTitle(text);
-  const { ko, en } = splitPrintKoEnText(formatted);
-
-  return [ko, "", en].filter((line, index) => index === 1 || line).join("\n");
+  return formatPrintTitle(text);
 }
 
 function splitPrintKoEnText(text) {
@@ -1269,8 +1285,80 @@ function getItemImageUrls(data) {
   );
 }
 
+const PRINT_IMAGE_HEIGHT_MM = 19;
+const PRINT_IMAGE_GAP_MM = 3;
+const PRINT_IMAGE_MAX_PER_ITEM = 2;
+const PRINT_IMAGE_ASSUMED_RATIO = 1.35;
+const PRINT_IMAGE_TARGET_WIDTH_PX = 480;
+
+function getPrintImageCapacity(segments) {
+  const totalWidth = segments.reduce(
+    (sum, segment) => sum + Math.max(0, segment.right - segment.left),
+    0,
+  );
+  const assumedWidth = PRINT_IMAGE_HEIGHT_MM * PRINT_IMAGE_ASSUMED_RATIO;
+  const capacity = Math.floor(
+    (totalWidth + PRINT_IMAGE_GAP_MM) / (assumedWidth + PRINT_IMAGE_GAP_MM),
+  );
+
+  return Math.max(1, Math.min(PRINT_IMAGE_MAX_PER_ITEM, capacity));
+}
+
+function getPrintOptimizedImageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname.includes("images.pexels.com")) {
+      parsed.searchParams.set("auto", "compress");
+      parsed.searchParams.set("cs", "tinysrgb");
+      parsed.searchParams.delete("dpr");
+      parsed.searchParams.delete("h");
+      parsed.searchParams.set("w", String(PRINT_IMAGE_TARGET_WIDTH_PX));
+      return parsed.toString();
+    }
+
+    if (hostname.includes("images.unsplash.com")) {
+      parsed.searchParams.set("auto", "format");
+      parsed.searchParams.set("fit", "max");
+      parsed.searchParams.set("q", "60");
+      parsed.searchParams.set("w", String(PRINT_IMAGE_TARGET_WIDTH_PX));
+      return parsed.toString();
+    }
+
+    if (hostname.includes("images.squarespace-cdn.com")) {
+      parsed.searchParams.set("format", "500w");
+      return parsed.toString();
+    }
+
+    if (
+      hostname.includes("ctfassets.net") ||
+      hostname.includes("contentful.com")
+    ) {
+      parsed.searchParams.set("fm", "webp");
+      parsed.searchParams.set("q", "60");
+      parsed.searchParams.set("w", String(PRINT_IMAGE_TARGET_WIDTH_PX));
+      return parsed.toString();
+    }
+
+    if (hostname.includes("m.media-amazon.com")) {
+      parsed.pathname = parsed.pathname.replace(
+        /\._[^/]*?SL\d+_[^/]*?\./,
+        "._AC_SL480_.",
+      );
+      return parsed.toString();
+    }
+
+    return url;
+  } catch (err) {
+    return url;
+  }
+}
+
 function appendPrintSpreadItemImages(segments, item) {
-  const urls = getItemImageUrls(item);
+  const urls = getItemImageUrls(item)
+    .slice(0, getPrintImageCapacity(segments))
+    .map(getPrintOptimizedImageUrl);
   const records = [];
 
   function layoutLoadedImages() {
@@ -1300,7 +1388,7 @@ function appendPrintSpreadItemImages(segments, item) {
       record.container.style.left = `${cursor}mm`;
       record.container.style.top = `${segments[segmentIndex].y}mm`;
       record.container.style.width = `${record.width}mm`;
-      cursor += record.width + 3;
+      cursor += record.width + PRINT_IMAGE_GAP_MM;
     });
   }
 
@@ -1324,7 +1412,7 @@ function appendPrintSpreadItemImages(segments, item) {
         ? img.naturalWidth / img.naturalHeight
         : 1;
       record.loaded = true;
-      record.width = 19 * ratio;
+      record.width = PRINT_IMAGE_HEIGHT_MM * ratio;
       layoutLoadedImages();
     };
 

@@ -525,6 +525,7 @@
     overflow: hidden;
     font-size: 10pt;
     line-height: 14.4pt;
+    white-space: pre-line;
   }
 
   .print-item-description {
