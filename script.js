@@ -423,6 +423,7 @@ function getPrintOrder(row) {
 }
 
 function getTrimWidth(pageNumber) {
+  if (pageNumber === 44) return 297;
   return 137 + Math.floor((pageNumber - 1) / 2) * 7.5;
 }
 
@@ -455,6 +456,19 @@ function appendPrintTextRun(parent, text) {
   if (cursor < normalized.length) {
     parent.appendChild(document.createTextNode(normalized.slice(cursor)));
   }
+}
+
+function createPrintSvg(className, viewBox, width, height) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+
+  svg.setAttribute("class", className);
+  svg.setAttribute("viewBox", viewBox);
+  svg.setAttribute("width", width);
+  svg.setAttribute("height", height);
+  svg.setAttribute("aria-hidden", "true");
+
+  return svg;
 }
 
 function setPrintText(el, text) {
@@ -622,6 +636,379 @@ function createPrintPartialWebCircles() {
   return svg;
 }
 
+const PRINT_HOLE_SIZE = 5;
+const PRINT_HOLE_GAP = 2.1;
+const PRINT_HOLE_PITCH = PRINT_HOLE_SIZE + PRINT_HOLE_GAP;
+
+function getHardcopyPattern(char, mode = "first") {
+  const value = String(char || "").toUpperCase();
+  const fallbackPatterns = {
+    A: ["01110", "10001", "11111", "10001", "10001"],
+    B: ["11110", "10001", "11110", "10001", "11110"],
+    C: ["01111", "10000", "10000", "10000", "01111"],
+    D: ["11110", "10001", "10001", "10001", "11110"],
+    E: ["11111", "10000", "11110", "10000", "11111"],
+    F: ["11111", "10000", "11110", "10000", "10000"],
+    G: ["01111", "10000", "10011", "10001", "01111"],
+    H: ["10001", "10001", "11111", "10001", "10001"],
+    I: ["11111", "00100", "00100", "00100", "11111"],
+    J: ["00111", "00010", "00010", "10010", "01100"],
+    K: ["10001", "10010", "11100", "10010", "10001"],
+    L: ["10000", "10000", "10000", "10000", "11111"],
+    M: ["10001", "11011", "10101", "10001", "10001"],
+    N: ["10001", "11001", "10101", "10011", "10001"],
+    O: ["01110", "10001", "10001", "10001", "01110"],
+    P: ["11110", "10001", "11110", "10000", "10000"],
+    Q: ["01110", "10001", "10001", "10011", "01111"],
+    R: ["11110", "10001", "11110", "10010", "10001"],
+    S: ["01111", "10000", "01110", "00001", "11110"],
+    T: ["11111", "00100", "00100", "00100", "00100"],
+    U: ["10001", "10001", "10001", "10001", "01110"],
+    V: ["10001", "10001", "10001", "01010", "00100"],
+    W: ["10001", "10001", "10101", "11011", "10001"],
+    X: ["10001", "01010", "00100", "01010", "10001"],
+    Y: ["10001", "01010", "00100", "00100", "00100"],
+    Z: ["11111", "00010", "00100", "01000", "11111"],
+    0: ["11111", "10001", "10001", "10001", "11111"],
+    1: ["00100", "01100", "00100", "00100", "01110"],
+    2: ["11110", "00001", "11110", "10000", "11111"],
+    3: ["11110", "00001", "01110", "00001", "11110"],
+    4: ["10010", "10010", "11111", "00010", "00010"],
+    5: ["11111", "10000", "11110", "00001", "11110"],
+    6: ["01111", "10000", "11110", "10001", "01110"],
+    7: ["11111", "00010", "00100", "01000", "01000"],
+    8: ["01110", "10001", "01110", "10001", "01110"],
+    9: ["01110", "10001", "01111", "00001", "11110"],
+  };
+  const selected = pickAlphabetPattern(
+    value,
+    cachedAlphabetPatternMap || {},
+    mode,
+  );
+
+  if (selected?.pattern) return selected.pattern.split("/");
+  return fallbackPatterns[value] || [];
+}
+
+function createHardcopyHoleText(text, className = "print-hardcopy-code") {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const columns = [];
+
+  normalizePrintText(text)
+    .split("")
+    .forEach((char) => {
+      if (char === "\n") return;
+      if (char === " ") {
+        columns.push("00000", "00000");
+        return;
+      }
+
+      const pattern = getHardcopyPattern(char);
+      if (!pattern.length) return;
+      columns.push(...pattern, "00000");
+    });
+
+  if (columns.length && columns[columns.length - 1] === "00000") {
+    columns.pop();
+  }
+
+  const width = columns.length
+    ? columns.length * PRINT_HOLE_SIZE + (columns.length - 1) * PRINT_HOLE_GAP
+    : PRINT_HOLE_SIZE;
+  const height = 5 * PRINT_HOLE_SIZE + 4 * PRINT_HOLE_GAP;
+  const svg = createPrintSvg(className, `0 0 ${width} ${height}`, `${width}mm`, `${height}mm`);
+
+  columns.forEach((bits, colIndex) => {
+    String(bits || "00000")
+      .padEnd(5, "0")
+      .slice(0, 5)
+      .split("")
+      .forEach((bit, rowIndex) => {
+        if (bit !== "1") return;
+        const circle = document.createElementNS(svgNS, "circle");
+        circle.setAttribute(
+          "cx",
+          String(colIndex * PRINT_HOLE_PITCH + PRINT_HOLE_SIZE / 2),
+        );
+        circle.setAttribute(
+          "cy",
+          String(rowIndex * PRINT_HOLE_PITCH + PRINT_HOLE_SIZE / 2),
+        );
+        circle.setAttribute("r", String(PRINT_HOLE_SIZE / 2));
+        svg.appendChild(circle);
+      });
+  });
+
+  return svg;
+}
+
+function createHardcopyPageNumber(pageNumber) {
+  const digits = String(pageNumber).split("");
+  const svgNS = "http://www.w3.org/2000/svg";
+  const columns = [];
+
+  digits.forEach((digit, index) => {
+    columns.push(...getHardcopyPattern(digit));
+    if (index < digits.length - 1) {
+      columns.push("00000");
+    }
+  });
+
+  const width = columns.length * PRINT_HOLE_SIZE + (columns.length - 1) * PRINT_HOLE_GAP;
+  const height = 5 * PRINT_HOLE_SIZE + 4 * PRINT_HOLE_GAP;
+  const svg = createPrintSvg(
+    "print-page-number-code",
+    `0 0 ${width} ${height}`,
+    `${width}mm`,
+    `${height}mm`,
+  );
+
+  columns.forEach((bits, colIndex) => {
+    String(bits)
+      .padEnd(5, "0")
+      .slice(0, 5)
+      .split("")
+      .forEach((bit, rowIndex) => {
+        if (bit !== "1") return;
+        const circle = document.createElementNS(svgNS, "circle");
+        circle.setAttribute(
+          "cx",
+          String(colIndex * PRINT_HOLE_PITCH + PRINT_HOLE_SIZE / 2),
+        );
+        circle.setAttribute(
+          "cy",
+          String(rowIndex * PRINT_HOLE_PITCH + PRINT_HOLE_SIZE / 2),
+        );
+        circle.setAttribute("r", String(PRINT_HOLE_SIZE / 2));
+        svg.appendChild(circle);
+      });
+  });
+
+  return svg;
+}
+
+function appendPrintPageNumber(trim, pageNumber) {
+  if (pageNumber < 3 || pageNumber % 2 === 0) return;
+
+  const number = createHardcopyPageNumber(pageNumber);
+  number.style.top = "12.5mm";
+  number.style.left =
+    pageNumber === 3 ? "134.5mm" : `${getTrimWidth(pageNumber) - 10.5}mm`;
+  number.style.transform = "translateX(-100%)";
+  trim.insertBefore(number, trim.firstChild);
+}
+
+function appendPrintCoverCode(trim, className = "print-hardcopy-code") {
+  const text = META.hardcopy_title || META.title || "";
+  if (!text) return;
+
+  const code = createHardcopyHoleText(text, className);
+  trim.appendChild(code);
+}
+
+function getQrFormatBits(mask) {
+  const data = (1 << 3) | mask;
+  let bits = data << 10;
+
+  for (let i = 14; i >= 10; i--) {
+    if (((bits >> i) & 1) === 1) bits ^= 0x537 << (i - 10);
+  }
+
+  return ((data << 10) | bits) ^ 0x5412;
+}
+
+function getQrErrorCorrection(dataCodewords, eccLength) {
+  const exp = new Array(512);
+  const log = new Array(256);
+  let value = 1;
+
+  for (let i = 0; i < 255; i++) {
+    exp[i] = value;
+    log[value] = i;
+    value <<= 1;
+    if (value & 0x100) value ^= 0x11d;
+  }
+  for (let i = 255; i < 512; i++) exp[i] = exp[i - 255];
+
+  const multiply = (a, b) => (a && b ? exp[log[a] + log[b]] : 0);
+  let generator = [1];
+
+  for (let degree = 0; degree < eccLength; degree++) {
+    const next = new Array(generator.length + 1).fill(0);
+    generator.forEach((coefficient, index) => {
+      next[index] ^= coefficient;
+      next[index + 1] ^= multiply(coefficient, exp[degree]);
+    });
+    generator = next;
+  }
+
+  const result = new Array(eccLength).fill(0);
+  dataCodewords.forEach((codeword) => {
+    const factor = codeword ^ result.shift();
+    result.push(0);
+    generator.slice(1).forEach((coefficient, index) => {
+      result[index] ^= multiply(coefficient, factor);
+    });
+  });
+
+  return result;
+}
+
+function createQrMatrix(text) {
+  const version = 5;
+  const size = 17 + 4 * version;
+  const dataCodewordCount = 108;
+  const eccLength = 26;
+  const bytes = Array.from(new TextEncoder().encode(String(text || ""))).slice(
+    0,
+    dataCodewordCount - 3,
+  );
+  const bits = [];
+  const matrix = Array.from({ length: size }, () => Array(size).fill(false));
+  const reserved = Array.from({ length: size }, () => Array(size).fill(false));
+
+  const pushBits = (value, length) => {
+    for (let i = length - 1; i >= 0; i--) bits.push((value >> i) & 1);
+  };
+  const setModule = (x, y, value, isReserved = true) => {
+    if (x < 0 || y < 0 || x >= size || y >= size) return;
+    matrix[y][x] = !!value;
+    if (isReserved) reserved[y][x] = true;
+  };
+  const addFinder = (x, y) => {
+    for (let dy = -1; dy <= 7; dy++) {
+      for (let dx = -1; dx <= 7; dx++) {
+        const xx = x + dx;
+        const yy = y + dy;
+        const active =
+          dx >= 0 &&
+          dy >= 0 &&
+          dx <= 6 &&
+          dy <= 6 &&
+          (dx === 0 ||
+            dx === 6 ||
+            dy === 0 ||
+            dy === 6 ||
+            (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4));
+        setModule(xx, yy, active);
+      }
+    }
+  };
+
+  addFinder(0, 0);
+  addFinder(size - 7, 0);
+  addFinder(0, size - 7);
+
+  for (let i = 8; i < size - 8; i++) {
+    setModule(i, 6, i % 2 === 0);
+    setModule(6, i, i % 2 === 0);
+  }
+
+  [6, 30].forEach((cx) => {
+    [6, 30].forEach((cy) => {
+      if (
+        (cx === 6 && cy === 6) ||
+        (cx === 30 && cy === 6) ||
+        (cx === 6 && cy === 30)
+      ) {
+        return;
+      }
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          setModule(
+            cx + dx,
+            cy + dy,
+            Math.max(Math.abs(dx), Math.abs(dy)) !== 1,
+          );
+        }
+      }
+    });
+  });
+
+  setModule(8, size - 8, true);
+  for (let i = 0; i < 9; i++) {
+    if (i !== 6) {
+      reserved[8][i] = true;
+      reserved[i][8] = true;
+    }
+  }
+  for (let i = 0; i < 8; i++) {
+    reserved[8][size - 1 - i] = true;
+    reserved[size - 1 - i][8] = true;
+  }
+
+  pushBits(0b0100, 4);
+  pushBits(bytes.length, 8);
+  bytes.forEach((byte) => pushBits(byte, 8));
+  const maxBits = dataCodewordCount * 8;
+  pushBits(0, Math.min(4, maxBits - bits.length));
+  while (bits.length % 8) bits.push(0);
+
+  const dataCodewords = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    dataCodewords.push(Number.parseInt(bits.slice(i, i + 8).join(""), 2));
+  }
+  for (let pad = 0; dataCodewords.length < dataCodewordCount; pad++) {
+    dataCodewords.push(pad % 2 ? 0x11 : 0xec);
+  }
+
+  const codewords = [
+    ...dataCodewords,
+    ...getQrErrorCorrection(dataCodewords, eccLength),
+  ];
+  const dataBits = codewords.flatMap((codeword) =>
+    Array.from({ length: 8 }, (_, index) => (codeword >> (7 - index)) & 1),
+  );
+  let bitIndex = 0;
+  let upward = true;
+
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right--;
+    for (let offset = 0; offset < size; offset++) {
+      const y = upward ? size - 1 - offset : offset;
+      for (let dx = 0; dx < 2; dx++) {
+        const x = right - dx;
+        if (reserved[y][x]) continue;
+        const mask = (x + y) % 2 === 0;
+        matrix[y][x] = Boolean((dataBits[bitIndex++] || 0) ^ mask);
+      }
+    }
+    upward = !upward;
+  }
+
+  const formatBits = getQrFormatBits(0);
+  for (let i = 0; i <= 5; i++) setModule(8, i, (formatBits >> i) & 1);
+  setModule(8, 7, (formatBits >> 6) & 1);
+  setModule(8, 8, (formatBits >> 7) & 1);
+  setModule(7, 8, (formatBits >> 8) & 1);
+  for (let i = 9; i < 15; i++) setModule(14 - i, 8, (formatBits >> i) & 1);
+  for (let i = 0; i < 8; i++) setModule(size - 1 - i, 8, (formatBits >> i) & 1);
+  for (let i = 8; i < 15; i++) setModule(8, size - 15 + i, (formatBits >> i) & 1);
+
+  return matrix;
+}
+
+function createPrintQrCode(data) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const matrix = createQrMatrix(data);
+  const size = matrix.length;
+  const svg = createPrintSvg("print-qrcode", `0 0 ${size} ${size}`, "20mm", "20mm");
+
+  matrix.forEach((row, y) => {
+    row.forEach((active, x) => {
+      if (!active) return;
+      const rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", String(x));
+      rect.setAttribute("y", String(y));
+      rect.setAttribute("width", "1");
+      rect.setAttribute("height", "1");
+      svg.appendChild(rect);
+    });
+  });
+
+  return svg;
+}
+
 function createPrintPage(pageNumber, type = "") {
   const page = createPrintEl("section", `print-page ${type}`);
   const trim = createPrintEl("div", "print-trim");
@@ -641,14 +1028,14 @@ function createPrintPage(pageNumber, type = "") {
   if (pageNumber === 2) {
     trim.appendChild(createPrintPartialWebCircles());
   }
-  if (pageNumber > 2 && pageNumber % 2 === 0) {
+  if (pageNumber > 2 && pageNumber !== 44 && pageNumber % 2 === 0) {
     trim.appendChild(createPrintWebCircles());
     const bottomCircles = createPrintWebCircles();
     bottomCircles.classList.add("print-web-circles-bottom");
     trim.appendChild(bottomCircles);
   }
-
   page.appendChild(trim);
+  appendPrintPageNumber(trim, pageNumber);
 
   return { page, trim };
 }
@@ -659,6 +1046,187 @@ function appendPrintTextBox(parent, className, text) {
   parent.appendChild(box);
 
   return box;
+}
+
+function splitPrintKoEnText(text) {
+  const lines = normalizePrintText(text).split("\n");
+  const englishStart = lines.findIndex((line, index) => {
+    if (index === 0) return false;
+    return /[A-Za-z]/.test(line) && !/[가-힣]/.test(line);
+  });
+
+  if (englishStart < 0) {
+    return { ko: lines.join("\n"), en: "" };
+  }
+
+  return {
+    ko: lines.slice(0, englishStart).join("\n").trimEnd(),
+    en: lines.slice(englishStart).join("\n").trim(),
+  };
+}
+
+function appendPrintDescriptionBox(parent, className, text) {
+  const box = createPrintEl("div", className);
+  const { ko, en } = splitPrintKoEnText(text);
+
+  if (ko) {
+    const koBox = createPrintEl("div", "print-description-ko");
+    setPrintText(koBox, ko);
+    box.appendChild(koBox);
+  }
+
+  if (en) {
+    const enBox = createPrintEl("div", "print-description-en print-arial");
+    setPrintText(enBox, en);
+    box.appendChild(enBox);
+  }
+
+  parent.appendChild(box);
+
+  return box;
+}
+
+function getPublicationDateText(date = new Date()) {
+  const weekdays = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+
+  return `${yyyy}. ${mm}. ${dd}.\n${weekdays[date.getDay()]}`;
+}
+
+function getPublicationUrl() {
+  const explicit = META.publication_url || META.site_url || META.website_url;
+  const raw = explicit || window.location.href || "";
+
+  const value = String(raw).trim();
+  if (!value) return "";
+  if (/^[a-z]+:\/\//i.test(value)) return value.replace(/^[a-z]+:\/\//i, "Https://");
+  return `Https://${value}`;
+}
+
+function appendPrintPublicationInfo(trim) {
+  appendPrintTextBox(
+    trim,
+    "print-publication-label print-arial",
+    "Publication Date",
+  );
+  appendPrintTextBox(
+    trim,
+    "print-publication-date print-arial",
+    getPublicationDateText(),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-published-from print-arial",
+    `Published from:\n${getPublicationUrl()}`,
+  );
+  if (META.qrcode_1) {
+    trim.appendChild(createPrintQrCode(META.qrcode_1));
+  }
+}
+
+function getPrintLineCount(text) {
+  const normalized = normalizePrintText(text).trimEnd();
+  if (!normalized) return 0;
+
+  return normalized.split("\n").length;
+}
+
+function positionProjectDescriptionEn(box) {
+  const koTop = 12.5;
+  const lineHeightMm = 16.4 * 0.352778;
+  const gap = 5.786;
+  const lineCount = getPrintLineCount(META.research_description || "");
+
+  box.style.top = `${koTop + lineCount * lineHeightMm + gap}mm`;
+}
+
+function getItemImageUrls(data) {
+  const sheetImageUrls = String(data.image_urls || data.images || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+  const jsonImageUrls = Array.isArray(cachedImageMap[String(data.id)])
+    ? cachedImageMap[String(data.id)]
+    : [];
+
+  return (sheetImageUrls.length ? sheetImageUrls : jsonImageUrls).filter(
+    (url) => !isBlockedImageUrl(url),
+  );
+}
+
+function appendPrintSpreadItemImages(segments, item) {
+  const urls = getItemImageUrls(item);
+  const records = [];
+
+  function layoutLoadedImages() {
+    let segmentIndex = 0;
+    let cursor = segments[0]?.left || 0;
+
+    records.forEach((record) => {
+      if (!record.loaded || !record.width) return;
+
+      while (
+        segments[segmentIndex] &&
+        cursor + record.width > segments[segmentIndex].right
+      ) {
+        segmentIndex++;
+        cursor = segments[segmentIndex]?.left || 0;
+      }
+
+      if (!segments[segmentIndex]) {
+        record.container.remove();
+        return;
+      }
+
+      if (record.container.parentElement !== segments[segmentIndex].trim) {
+        segments[segmentIndex].trim.appendChild(record.container);
+      }
+
+      record.container.style.left = `${cursor}mm`;
+      record.container.style.top = `${segments[segmentIndex].y}mm`;
+      record.container.style.width = `${record.width}mm`;
+      cursor += record.width + 3;
+    });
+  }
+
+  urls.forEach((url) => {
+    const container = createPrintEl("div", "print-item-image-container");
+    const img = document.createElement("img");
+    const record = { container, loaded: false, width: 0 };
+
+    container.style.left = `${segments[0]?.left || 0}mm`;
+    container.style.top = `${segments[0]?.y || 0}mm`;
+    container.style.width = "0mm";
+    img.src = url;
+    img.alt = item.image_query || item.title || "related image";
+    img.loading = "eager";
+    img.referrerPolicy = "no-referrer";
+    img.onerror = () => {
+      container.remove();
+    };
+    img.onload = () => {
+      const ratio = img.naturalWidth && img.naturalHeight
+        ? img.naturalWidth / img.naturalHeight
+        : 1;
+      record.loaded = true;
+      record.width = 19 * ratio;
+      layoutLoadedImages();
+    };
+
+    records.push(record);
+    container.appendChild(img);
+    if (segments[0]) segments[0].trim.appendChild(container);
+  });
 }
 
 function getSystemCategoryRows(systemMap) {
@@ -758,7 +1326,7 @@ function renderPrintSystemPage(trim, systemMap) {
     "contribution",
     "collaboration",
   ];
-  const conceptY = [18.036, 29.607, 41.178, 52.749, 64.32];
+  const conceptY = [18.286, 29.857, 41.428, 52.999, 64.57];
   const categoryRows = getSystemCategoryRows(systemMap);
   const scoreDescription = getRecordText(systemMap.score, "description")
     .split(/\r?\n/)
@@ -806,7 +1374,7 @@ function renderPrintSystemPage(trim, systemMap) {
     },
     {
       text: getRecordText(systemMap.classification_open, "en"),
-      className: "print-blue",
+      className: "print-blue print-tight-openness",
     },
     { text: getRecordText(systemMap.classification_public, "ko") },
     { text: getRecordText(systemMap.classification_public, "en") },
@@ -870,6 +1438,8 @@ function renderPrintLayout(items, systemMap = {}) {
   root.innerHTML = "";
 
   const cover = createPrintPage(1, "print-cover-page");
+  appendPrintCoverCode(cover.trim);
+  appendPrintPublicationInfo(cover.trim);
   root.appendChild(cover.page);
 
   const project = createPrintPage(2, "print-project-page");
@@ -901,6 +1471,12 @@ function renderPrintLayout(items, systemMap = {}) {
     "print-project-description description keep-all",
     META.research_description || "",
   );
+  const projectDescriptionEn = appendPrintTextBox(
+    project.trim,
+    "print-project-description-en description keep-all print-arial",
+    META.research_description_en || "",
+  );
+  positionProjectDescriptionEn(projectDescriptionEn);
   root.appendChild(project.page);
 
   const book = createPrintPage(3, "print-book-page");
@@ -928,7 +1504,7 @@ function renderPrintLayout(items, systemMap = {}) {
         "print-item-title keep-all",
         formatPrintTitle(item.title || ""),
       );
-      appendPrintTextBox(
+      appendPrintDescriptionBox(
         row,
         "print-item-description description keep-all",
         item.description || "",
@@ -938,8 +1514,6 @@ function renderPrintLayout(items, systemMap = {}) {
     });
 
     itemPage.trim.appendChild(list);
-    root.appendChild(itemPage.page);
-
     const comparePage = createPrintPage(pageNumber + 1, "print-compare-page");
     if (spreadItems[0]) {
       appendPrintCompareBoxes(comparePage.trim, spreadItems[0], "print-compare-top");
@@ -951,8 +1525,51 @@ function renderPrintLayout(items, systemMap = {}) {
         "print-compare-bottom",
       );
     }
+    if (spreadItems[0]) {
+      appendPrintSpreadItemImages(
+        [
+          {
+            trim: itemPage.trim,
+            left: 10,
+            right: getTrimWidth(pageNumber) - 20,
+            y: 78.75,
+          },
+          {
+            trim: comparePage.trim,
+            left: 20,
+            right: getTrimWidth(pageNumber + 1) - 10,
+            y: 78.75,
+          },
+        ],
+        spreadItems[0],
+      );
+    }
+    if (spreadItems[1]) {
+      appendPrintSpreadItemImages(
+        [
+          {
+            trim: itemPage.trim,
+            left: 10,
+            right: getTrimWidth(pageNumber) - 20,
+            y: 173.75,
+          },
+          {
+            trim: comparePage.trim,
+            left: 20,
+            right: getTrimWidth(pageNumber + 1) - 10,
+            y: 173.75,
+          },
+        ],
+        spreadItems[1],
+      );
+    }
+    root.appendChild(itemPage.page);
     root.appendChild(comparePage.page);
   }
+
+  const backCover = createPrintPage(44, "print-back-cover-page");
+  appendPrintCoverCode(backCover.trim, "print-back-cover-code");
+  root.appendChild(backCover.page);
 }
 
 function getTopClassification(data) {

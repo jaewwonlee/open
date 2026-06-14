@@ -56,6 +56,11 @@
     break-after: auto;
   }
 
+  .print-back-cover-page {
+    width: 297mm;
+    height: 210mm;
+  }
+
   .print-trim {
     position: absolute;
     top: 0;
@@ -186,6 +191,60 @@
     display: none;
   }
 
+  .print-cover-page .print-trim,
+  .print-cover-page .print-trim * {
+    line-height: 12pt;
+  }
+
+  .print-hardcopy-code,
+  .print-back-cover-code,
+  .print-page-number-code {
+    position: absolute;
+    overflow: visible;
+    z-index: 6;
+  }
+
+  .print-page-number-code {
+    z-index: 0;
+  }
+
+  .print-hardcopy-code {
+    left: 20mm;
+    top: 20mm;
+  }
+
+  .print-back-cover-code {
+    left: 20mm;
+    top: 20mm;
+  }
+
+  .print-hardcopy-code circle,
+  .print-qrcode rect {
+    fill: #ffffff;
+  }
+
+  .print-back-cover-code circle {
+    fill: #000000;
+  }
+
+  .print-page-number-code circle {
+    fill: #1155cc;
+  }
+
+  .print-page-number-code {
+    position: absolute;
+  }
+
+  .print-qrcode {
+    position: absolute;
+    left: 107mm;
+    top: 177.388mm;
+    width: 20mm;
+    height: 20mm;
+    z-index: 6;
+    shape-rendering: crispEdges;
+  }
+
   .print-hardcopy-title {
     position: absolute;
     left: 10mm;
@@ -199,7 +258,11 @@
   .print-front-page .print-hardcopy-title,
   .print-front-page .print-hardcopy-category-ko,
   .print-front-page .print-hardcopy-category-en,
-  .print-front-page .print-project-description {
+  .print-front-page .print-project-description,
+  .print-front-page .print-project-description-en,
+  .print-front-page .print-publication-label,
+  .print-front-page .print-publication-date,
+  .print-front-page .print-published-from {
     color: #ffffff;
   }
 
@@ -233,10 +296,51 @@
     z-index: 6;
   }
 
+  .print-project-description-en {
+    position: absolute;
+    left: 47mm;
+    width: 70mm;
+    height: 70mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 16.4pt;
+    z-index: 6;
+  }
+
+  .print-publication-label,
+  .print-publication-date,
+  .print-published-from {
+    position: absolute;
+    font-size: 10pt;
+    line-height: 12pt;
+    z-index: 6;
+  }
+
+  .print-publication-label {
+    left: 20mm;
+    top: 177.388mm;
+    width: 31.714mm;
+  }
+
+  .print-publication-date {
+    left: 51.714mm;
+    top: 177.388mm;
+    width: 31.714mm;
+    white-space: pre-line;
+  }
+
+  .print-published-from {
+    left: 20mm;
+    top: 188.959mm;
+    width: 63.429mm;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
   .print-system-dictionary {
     position: absolute;
     left: 20mm;
-    top: 12.25mm;
+    top: 12.5mm;
     width: 63.714mm;
     font-size: 10pt;
     line-height: 16.4pt;
@@ -282,7 +386,7 @@
   .print-system-classification {
     position: absolute;
     left: 20mm;
-    top: 84.569mm;
+    top: 84.819mm;
     width: 114.5mm;
     height: 40.499mm;
     font-size: 10pt;
@@ -290,10 +394,14 @@
     overflow: hidden;
   }
 
+  .print-tight-openness {
+    letter-spacing: -0.05em;
+  }
+
   .print-category-type-title {
     position: absolute;
     left: 20mm;
-    top: 127.961mm;
+    top: 128.211mm;
     width: 46.786mm;
     font-size: 10pt;
     line-height: 16.4pt;
@@ -304,7 +412,7 @@
   .print-category-type-ko,
   .print-category-type-en {
     position: absolute;
-    top: 133.747mm;
+    top: 133.997mm;
     height: 40.499mm;
     font-size: 10pt;
     line-height: 16.4pt;
@@ -331,17 +439,17 @@
   }
 
   .print-directionality {
-    top: 127.961mm;
+    top: 128.211mm;
   }
 
   .print-stage {
-    top: 153.996mm;
+    top: 154.246mm;
   }
 
   .print-score-title {
     position: absolute;
     left: 20mm;
-    top: 180.031mm;
+    top: 180.281mm;
     width: 57.25mm;
     font-size: 10pt;
     line-height: 16.4pt;
@@ -350,7 +458,7 @@
   .print-score-description-left,
   .print-score-description-right {
     position: absolute;
-    top: 185.817mm;
+    top: 186.067mm;
     width: 57.25mm;
     font-size: 10pt;
     line-height: 16.4pt;
@@ -407,6 +515,10 @@
     line-height: 16.4pt;
   }
 
+  .print-description-en {
+    line-height: 14.4pt;
+  }
+
   .print-item-category-ko,
   .print-item-category-en {
     position: absolute;
@@ -418,6 +530,20 @@
   .print-item-category-ko {
     left: 10mm;
     width: 15mm;
+  }
+
+  .print-item-image-container {
+    position: absolute;
+    height: 19mm;
+    overflow: hidden;
+    z-index: 2;
+  }
+
+  .print-item-image-container img {
+    display: block;
+    width: 100%;
+    height: 19mm;
+    object-fit: contain;
   }
 
   .print-item-category-en {
