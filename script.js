@@ -577,10 +577,6 @@ function createPrintFrontMarks() {
     "M176.5 43.5 H184.5 M173.5 32.5 V40.5",
     "M25.5 253.5 H33.5 M36.5 256.5 V264.5",
     "M176.5 253.5 H184.5 M173.5 256.5 V264.5",
-    "M25.5 40.5 H33.5 M33.5 32.5 V40.5",
-    "M176.5 40.5 H184.5 M176.5 32.5 V40.5",
-    "M25.5 256.5 H33.5 M33.5 256.5 V264.5",
-    "M176.5 256.5 H184.5 M176.5 256.5 V264.5",
   ];
 
   svg.setAttribute("class", "print-front-marks");
@@ -589,13 +585,12 @@ function createPrintFrontMarks() {
   svg.setAttribute("height", "297mm");
   svg.setAttribute("aria-hidden", "true");
 
-  paths.forEach((d, index) => {
+  paths.forEach((d) => {
     const path = document.createElementNS(svgNS, "path");
     path.setAttribute("d", d);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", "#000000");
     path.setAttribute("stroke-width", "0.0706");
-    if (index >= 4) path.setAttribute("stroke-dasharray", "1 1");
     svg.appendChild(path);
   });
 
@@ -1138,6 +1133,7 @@ function createPrintPage(pageNumber, type = "") {
   if (pageNumber <= 2) {
     page.classList.add("print-front-page");
     trim.appendChild(createPrintEl("div", "print-front-bleed"));
+    trim.appendChild(createPrintFrontMarks());
   }
 
   trim.appendChild(createPrintTrimLine());
