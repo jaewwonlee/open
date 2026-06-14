@@ -520,6 +520,22 @@ function getMetaLowercase(key) {
   return explicit || String(fallback || "").toLowerCase();
 }
 
+function getMetaTitleCase(key) {
+  const value = String(META[key] || "").trim();
+  if (!value) return "";
+
+  return value.replace(/\S+/g, (word) => {
+    const firstLetter = word.search(/[A-Za-z]/);
+    if (firstLetter < 0) return word;
+
+    return (
+      word.slice(0, firstLetter) +
+      word.charAt(firstLetter).toUpperCase() +
+      word.slice(firstLetter + 1).toLowerCase()
+    );
+  });
+}
+
 function appendPrintLines(parent, className, lines) {
   const box = createPrintEl("div", className);
 
@@ -1261,7 +1277,7 @@ function getPrintLineCount(text) {
 function positionProjectDescriptionEn(box) {
   const koTop = 12.5;
   const lineHeightMm = 16.4 * 0.352778;
-  const gap = 5.786;
+  const gap = 5.786 + lineHeightMm;
   const lineCount = getPrintLineCount(META.research_description || "");
 
   box.style.top = `${koTop + lineCount * lineHeightMm + gap}mm`;
@@ -1651,11 +1667,11 @@ function renderPrintLayout(items, systemMap = {}) {
     project.trim,
     "print-hardcopy-category-en description keep-all",
     [
-      getMetaLowercase("category_word_concept"),
-      getMetaLowercase("category_word_digital"),
-      getMetaLowercase("category_word_media"),
-      getMetaLowercase("category_word_ACTION") ||
-        getMetaLowercase("category_word_action"),
+      getMetaTitleCase("category_word_concept"),
+      getMetaTitleCase("category_word_digital"),
+      getMetaTitleCase("category_word_media"),
+      getMetaTitleCase("category_word_ACTION") ||
+        getMetaTitleCase("category_word_action"),
     ]
       .filter(Boolean)
       .join("\n"),
