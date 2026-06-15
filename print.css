@@ -256,14 +256,6 @@
     fill: #1155cc;
   }
 
-  .print-back-cover-title-ko {
-    transform: scale(0.92);
-  }
-
-  .print-back-cover-title-en {
-    transform: scale(0.5);
-  }
-
   .print-page-number-code circle {
     fill: #1155cc;
   }
