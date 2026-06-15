@@ -207,6 +207,7 @@
 
   .print-hardcopy-code,
   .print-back-cover-code,
+  .print-back-cover-title,
   .print-page-number-code,
   .print-cover-title-ko,
   .print-cover-title-en,
@@ -245,6 +246,22 @@
 
   .print-back-cover-code circle {
     fill: #000000;
+  }
+
+  .print-back-cover-title {
+    transform-origin: left top;
+  }
+
+  .print-back-cover-title circle {
+    fill: #1155cc;
+  }
+
+  .print-back-cover-title-ko {
+    transform: scale(0.92);
+  }
+
+  .print-back-cover-title-en {
+    transform: scale(0.5);
   }
 
   .print-page-number-code circle {

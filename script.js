@@ -738,14 +738,25 @@ function pickAlphabetPatternByLabel(letter, label) {
   const targetLabel = String(label || "")
     .trim()
     .toUpperCase();
+  const canonicalTargetLabel = targetLabel.replace(/[^A-Z0-9가-힣→]/g, "");
   const options = cachedAlphabetPatternMap[key] || [];
 
   return (
     options.find(
-      (option) =>
-        String(option.label || "")
+      (option) => {
+        const optionLabel = String(option.label || "")
           .trim()
-          .toUpperCase() === targetLabel,
+          .toUpperCase();
+        const canonicalOptionLabel = optionLabel.replace(
+          /[^A-Z0-9가-힣→]/g,
+          "",
+        );
+
+        return (
+          optionLabel === targetLabel ||
+          canonicalOptionLabel === canonicalTargetLabel
+        );
+      },
     ) || null
   );
 }
@@ -852,6 +863,111 @@ function createHardcopyArrow(className = "print-hardcopy-code") {
   if (!pattern?.pattern) return null;
 
   return createHardcopyHoleSvgFromColumns(pattern.pattern.split("/"), className);
+}
+
+const BACK_COVER_GLYPH_LABELS = {
+  O: "O_1",
+  P: "P_3",
+  N: "N_2",
+  R: "R_3",
+  E: "E_2",
+  S: "S_1",
+  A: "A_3",
+  C: "C_1",
+  H: "H2",
+};
+
+function getBackCoverTokenColumns(tokens) {
+  const columns = [];
+
+  tokens.forEach((token, index) => {
+    if (token === " ") {
+      columns.push("00000", "00000");
+      return;
+    }
+
+    const pattern =
+      token === "→"
+        ? pickAlphabetPattern("→", cachedAlphabetPatternMap || {}, "first")
+            ?.pattern.split("/")
+        : getHardcopyGlyphColumns([
+            {
+              char: token,
+              label: BACK_COVER_GLYPH_LABELS[String(token).toUpperCase()] || "",
+            },
+          ]);
+
+    if (!pattern?.length) return;
+    columns.push(...pattern);
+    if (index < tokens.length - 1) columns.push("00000");
+  });
+
+  return columns;
+}
+
+function createBackCoverHoleText(text, className = "print-back-cover-title") {
+  const columns = [];
+
+  normalizePrintText(text)
+    .split("")
+    .forEach((char, index, chars) => {
+      if (char === "\n") return;
+      if (char === " ") {
+        columns.push("00000", "00000");
+        return;
+      }
+
+      const pattern = getHardcopyPattern(char);
+      if (!pattern.length) return;
+      columns.push(...pattern);
+      if (index < chars.length - 1) columns.push("00000");
+    });
+
+  while (columns[columns.length - 1] === "00000") columns.pop();
+
+  return createHardcopyHoleSvgFromColumns(columns, className);
+}
+
+function createBackCoverEnglishTitle() {
+  return createHardcopyHoleSvgFromColumns(
+    getBackCoverTokenColumns("OPEN RESEARCH →".split("")),
+    "print-back-cover-title print-back-cover-title-en",
+  );
+}
+
+function appendBackCoverTitleLayer(trim, node, left, top) {
+  node.style.left = `${left}mm`;
+  node.style.top = `${top}mm`;
+  trim.appendChild(node);
+}
+
+function appendPrintBackCoverTitles(trim) {
+  const rows = [
+    {
+      ko: "오픈리서치",
+      koX: 10,
+      koY: 12.5,
+      enX: 10,
+      enY: 58.5,
+    },
+    {
+      ko: "오픈 리서치",
+      koX: 10,
+      koY: 107.75,
+      enX: 10,
+      enY: 153.75,
+    },
+  ];
+
+  rows.forEach((row) => {
+    appendBackCoverTitleLayer(
+      trim,
+      createBackCoverHoleText(row.ko, "print-back-cover-title print-back-cover-title-ko"),
+      row.koX,
+      row.koY,
+    );
+    appendBackCoverTitleLayer(trim, createBackCoverEnglishTitle(), row.enX, row.enY);
+  });
 }
 
 function createHardcopyPageNumber(pageNumber) {
@@ -1325,9 +1441,9 @@ function formatResearchDuration() {
   const label = formatPrintKoEnLabel(META.research_duration || "");
   const date = normalizePrintText(META.research_duration_date || "")
     .trim()
-    .replace(/\s+—\s+/g, " —\u200b ");
+    .replace(/\s+—\s+/g, " —\n");
 
-  return [label, "", date].filter((line, index) => index === 1 || line).join("\n");
+  return [label, date].filter(Boolean).join("\n");
 }
 
 function appendPrintProjectQr(trim, descriptionKey, qrKey, x) {
@@ -1869,7 +1985,7 @@ function renderPrintLayout(items, systemMap = {}) {
   }
 
   const backCover = createPrintPage(44, "print-back-cover-page");
-  appendPrintCoverCode(backCover.trim, "print-back-cover-code");
+  appendPrintBackCoverTitles(backCover.trim);
   root.appendChild(backCover.page);
 }
 
