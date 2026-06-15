@@ -877,8 +877,38 @@ const BACK_COVER_GLYPH_LABELS = {
   H: "H2",
 };
 
+function getBackCoverTokenPattern(token) {
+  if (token === "→") {
+    const selected = pickAlphabetPattern(
+      "→",
+      cachedAlphabetPatternMap || {},
+      "first",
+    );
+
+    return {
+      pattern: selected?.pattern?.split("/") || [],
+      label: selected?.label || "→",
+    };
+  }
+
+  const char = String(token || "").toUpperCase();
+  const label = BACK_COVER_GLYPH_LABELS[char] || "";
+  const selected = label ? pickAlphabetPatternByLabel(char, label) : null;
+
+  return {
+    pattern: selected?.pattern?.split("/") || getHardcopyPattern(char),
+    label: selected?.label || label || char,
+  };
+}
+
 function getBackCoverTokenColumns(tokens) {
   const columns = [];
+  const selectedByIndex = [];
+
+  tokens.forEach((token, index) => {
+    if (token === " ") return;
+    selectedByIndex[index] = getBackCoverTokenPattern(token);
+  });
 
   tokens.forEach((token, index) => {
     if (token === " ") {
@@ -886,20 +916,25 @@ function getBackCoverTokenColumns(tokens) {
       return;
     }
 
-    const pattern =
-      token === "→"
-        ? pickAlphabetPattern("→", cachedAlphabetPatternMap || {}, "first")
-            ?.pattern.split("/")
-        : getHardcopyGlyphColumns([
-            {
-              char: token,
-              label: BACK_COVER_GLYPH_LABELS[String(token).toUpperCase()] || "",
-            },
-          ]);
+    const selected = selectedByIndex[index];
+    const nextSelected = selectedByIndex[index + 1];
 
-    if (!pattern?.length) return;
-    columns.push(...pattern);
-    if (index < tokens.length - 1) columns.push("00000");
+    if (!selected?.pattern?.length) return;
+
+    columns.push(...selected.pattern);
+
+    const gapCount = getKerningGap(
+      selected.label || "",
+      nextSelected?.label || "",
+      cachedKerningMap,
+      1,
+    );
+    const normalizedPair = `${normalizeKerningLabel(
+      selected.label,
+    )}|${normalizeKerningLabel(nextSelected?.label)}`;
+    const resolvedGapCount = normalizedPair === "R3|C1" ? 0 : gapCount;
+
+    for (let i = 0; i < resolvedGapCount; i++) columns.push("00000");
   });
 
   return columns;
@@ -2195,9 +2230,19 @@ function buildKerningMap(rows) {
     if (!leftLabel || !rightLabel || !Number.isFinite(value)) return;
 
     map[`${leftLabel}|${rightLabel}`] = value;
+    map[
+      `${normalizeKerningLabel(leftLabel)}|${normalizeKerningLabel(rightLabel)}`
+    ] = value;
   });
 
   return map;
+}
+
+function normalizeKerningLabel(label) {
+  return String(label || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9가-힣→]/g, "");
 }
 
 function getKerningGap(
@@ -2216,7 +2261,10 @@ function getKerningGap(
   if (!left || !right) return 0;
 
   const key = `${left}|${right}`;
-  const adjustment = kerningMap[key];
+  const canonicalKey = `${normalizeKerningLabel(left)}|${normalizeKerningLabel(
+    right,
+  )}`;
+  const adjustment = kerningMap[key] ?? kerningMap[canonicalKey];
 
   if (!Number.isFinite(adjustment)) return defaultGap;
 
