@@ -655,6 +655,18 @@ function setPrintWebCirclesFill(svg, fill) {
   });
 }
 
+function createPrintOddAssistCircles() {
+  const svg = createPrintWebCircles();
+  svg.classList.add("print-odd-assist-circles");
+  setPrintWebCirclesFill(svg, "#1155CC");
+
+  Array.from(svg.querySelectorAll("circle")).forEach((circle, index) => {
+    if (index === 3) circle.remove();
+  });
+
+  return svg;
+}
+
 function createPrintPartialWebCircles() {
   const svg = createPrintWebCircles();
   svg.classList.add("print-web-circles-partial");
@@ -893,9 +905,21 @@ function appendPrintPageNumber(trim, pageNumber) {
   const number = createHardcopyPageNumber(pageNumber);
   number.style.top = "12.5mm";
   number.style.left =
-    pageNumber === 3 ? "134.5mm" : `${getTrimWidth(pageNumber) - 10.5}mm`;
+    pageNumber === 3 ? "134.5mm" : `${getTrimWidth(pageNumber) - 33}mm`;
   number.style.transform = "translateX(-100%)";
   trim.insertBefore(number, trim.firstChild);
+}
+
+function appendPrintOddAssistCircles(trim, pageNumber) {
+  if (pageNumber <= 3 || pageNumber % 2 === 0 || pageNumber === 44) return;
+
+  ["0mm", "95.5mm"].forEach((top) => {
+    const circles = createPrintOddAssistCircles();
+    circles.style.left = `${getTrimWidth(pageNumber) - 10.5}mm`;
+    circles.style.top = top;
+    circles.style.transform = "translateX(-100%)";
+    trim.insertBefore(circles, trim.firstChild);
+  });
 }
 
 function appendPrintCoverCode(trim, className = "print-hardcopy-code") {
@@ -1117,11 +1141,11 @@ function createQrMatrix(text) {
   return matrix;
 }
 
-function createPrintQrCode(data) {
+function createPrintQrCode(data, className = "print-qrcode") {
   const svgNS = "http://www.w3.org/2000/svg";
   const matrix = createQrMatrix(data);
   const size = matrix.length;
-  const svg = createPrintSvg("print-qrcode", `0 0 ${size} ${size}`, "20mm", "20mm");
+  const svg = createPrintSvg(className, `0 0 ${size} ${size}`, "20mm", "20mm");
 
   matrix.forEach((row, y) => {
     row.forEach((active, x) => {
@@ -1164,6 +1188,7 @@ function createPrintPage(pageNumber, type = "") {
     trim.appendChild(bottomCircles);
   }
   page.appendChild(trim);
+  appendPrintOddAssistCircles(trim, pageNumber);
   appendPrintPageNumber(trim, pageNumber);
 
   return { page, trim };
@@ -1281,6 +1306,71 @@ function positionProjectDescriptionEn(box) {
   const lineCount = getPrintLineCount(META.research_description || "");
 
   box.style.top = `${koTop + lineCount * lineHeightMm + gap}mm`;
+}
+
+function formatPrintKoEnLabel(text) {
+  const value = normalizePrintText(text).trim();
+  if (!value) return "";
+
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 1) return lines.join("\n");
+
+  const match = value.match(/^(.+?)\s+([A-Za-z].*)$/);
+  if (!match) return value;
+
+  return `${match[1].trim()}\n${match[2].trim()}`;
+}
+
+function formatResearchDuration() {
+  const label = formatPrintKoEnLabel(META.research_duration || "");
+  const date = normalizePrintText(META.research_duration_date || "")
+    .trim()
+    .replace(/\s+—\s+/g, " —\u200b ");
+
+  return [label, "", date].filter((line, index) => index === 1 || line).join("\n");
+}
+
+function appendPrintProjectQr(trim, descriptionKey, qrKey, x) {
+  appendPrintTextBox(
+    trim,
+    `print-project-qrcode-description print-project-qrcode-description-${qrKey} description keep-all`,
+    META[descriptionKey] || "",
+  );
+
+  const description = trim.querySelector(
+    `.print-project-qrcode-description-${qrKey}`,
+  );
+  if (description) description.style.left = `${x}mm`;
+
+  if (!META[qrKey]) return;
+
+  const qr = createPrintQrCode(
+    META[qrKey],
+    `print-qrcode print-project-qrcode print-project-${qrKey}`,
+  );
+  qr.style.left = `${x + 27.75}mm`;
+  qr.style.top = "177.5mm";
+  trim.appendChild(qr);
+}
+
+function appendPrintProjectDetails(trim) {
+  appendPrintTextBox(
+    trim,
+    "print-research-duration description keep-all",
+    formatResearchDuration(),
+  );
+  appendPrintTextBox(
+    trim,
+    "print-contact-ko description keep-all",
+    META.contact_ko || "",
+  );
+  appendPrintTextBox(
+    trim,
+    "print-contact-en description keep-all print-arial",
+    META.contact_en || "",
+  );
+  appendPrintProjectQr(trim, "qrcode_2_description", "qrcode_2", 10);
+  appendPrintProjectQr(trim, "qrcode_3_description", "qrcode_3", 65.5);
 }
 
 function getItemImageUrls(data) {
@@ -1687,6 +1777,7 @@ function renderPrintLayout(items, systemMap = {}) {
     META.research_description_en || "",
   );
   positionProjectDescriptionEn(projectDescriptionEn);
+  appendPrintProjectDetails(project.trim);
   root.appendChild(project.page);
 
   const book = createPrintPage(3, "print-book-page");

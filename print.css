@@ -187,6 +187,15 @@
     top: 95.5mm;
   }
 
+  .print-odd-assist-circles {
+    z-index: 0;
+  }
+
+  .print-odd-assist-circles circle {
+    fill: #1155cc;
+    stroke: none;
+  }
+
   .print-cover-placeholder {
     display: none;
   }
@@ -282,6 +291,10 @@
   .print-front-page .print-hardcopy-category-en,
   .print-front-page .print-project-description,
   .print-front-page .print-project-description-en,
+  .print-front-page .print-research-duration,
+  .print-front-page .print-contact-ko,
+  .print-front-page .print-contact-en,
+  .print-front-page .print-project-qrcode-description,
   .print-front-page .print-publication-label,
   .print-front-page .print-publication-date,
   .print-front-page .print-published-from {
@@ -327,6 +340,48 @@
     font-size: 10pt;
     line-height: 16.4pt;
     z-index: 6;
+  }
+
+  .print-research-duration,
+  .print-contact-ko,
+  .print-contact-en {
+    position: absolute;
+    left: 10mm;
+    width: 33mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 14.4pt;
+    z-index: 6;
+  }
+
+  .print-research-duration {
+    top: 74.25mm;
+  }
+
+  .print-contact-ko {
+    top: 99.747mm;
+  }
+
+  .print-contact-en {
+    top: 128.675mm;
+    height: 28.464mm;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  .print-project-qrcode-description {
+    position: absolute;
+    top: 177.5mm;
+    width: 23.75mm;
+    height: 20mm;
+    overflow: hidden;
+    font-size: 10pt;
+    line-height: 12pt;
+    z-index: 6;
+  }
+
+  .print-project-qrcode {
+    top: 177.5mm;
   }
 
   .print-publication-label,
