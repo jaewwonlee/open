@@ -928,10 +928,10 @@ function createBackCoverHoleText(text, className = "print-back-cover-title") {
   return createHardcopyHoleSvgFromColumns(columns, className);
 }
 
-function createBackCoverEnglishTitle() {
+function createBackCoverEnglishWord(text, className = "") {
   return createHardcopyHoleSvgFromColumns(
-    getBackCoverTokenColumns("OPEN RESEARCH →".split("")),
-    "print-back-cover-title print-back-cover-title-en",
+    getBackCoverTokenColumns(text.split("")),
+    `print-back-cover-title print-back-cover-title-en ${className}`.trim(),
   );
 }
 
@@ -946,16 +946,24 @@ function appendPrintBackCoverTitles(trim) {
     {
       ko: "오픈리서치",
       koX: 10,
-      koY: 12.5,
-      enX: 10,
-      enY: 58.5,
+      koY: 10,
+      openX: 66.82,
+      openY: 38.5,
+      arrowX: 187.52,
+      arrowY: 24.2,
+      researchX: 10,
+      researchY: 67,
     },
     {
       ko: "오픈 리서치",
       koX: 10,
-      koY: 107.75,
-      enX: 10,
-      enY: 153.75,
+      koY: 108.354,
+      openX: 81.02,
+      openY: 136.854,
+      arrowX: 208.82,
+      arrowY: 122.554,
+      researchX: 10,
+      researchY: 165.354,
     },
   ];
 
@@ -966,7 +974,24 @@ function appendPrintBackCoverTitles(trim) {
       row.koX,
       row.koY,
     );
-    appendBackCoverTitleLayer(trim, createBackCoverEnglishTitle(), row.enX, row.enY);
+    appendBackCoverTitleLayer(
+      trim,
+      createBackCoverEnglishWord("OPEN", "print-back-cover-title-open"),
+      row.openX,
+      row.openY,
+    );
+    appendBackCoverTitleLayer(
+      trim,
+      createBackCoverEnglishWord("→", "print-back-cover-title-arrow"),
+      row.arrowX,
+      row.arrowY,
+    );
+    appendBackCoverTitleLayer(
+      trim,
+      createBackCoverEnglishWord("RESEARCH", "print-back-cover-title-research"),
+      row.researchX,
+      row.researchY,
+    );
   });
 }
 
