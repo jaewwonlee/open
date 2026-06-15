@@ -576,8 +576,9 @@ function createPrintTrimLine() {
   line.setAttribute("x2", "0.5");
   line.setAttribute("y2", "210");
   line.setAttribute("stroke", "#000000");
-  line.setAttribute("stroke-width", "0.0706");
-  line.setAttribute("stroke-dasharray", "1 1");
+  line.setAttribute("stroke-width", "0.5pt");
+  line.setAttribute("stroke-dasharray", "2 2");
+  line.setAttribute("stroke-linecap", "round");
   line.setAttribute("vector-effect", "non-scaling-stroke");
 
   svg.appendChild(line);
@@ -993,7 +994,7 @@ function appendPrintBackCoverTitles(trim) {
       ko: "오픈 리서치",
       koX: 10,
       koY: 108.354,
-      openX: 81.02,
+      openX: 59.72,
       openY: 136.854,
       arrowX: 208.82,
       arrowY: 122.554,
@@ -1506,6 +1507,17 @@ function formatResearchDuration() {
   return [label, date].filter(Boolean).join("\n");
 }
 
+function formatContactKo(text) {
+  const value = normalizePrintText(text).trim();
+  if (!value) return "";
+
+  return value
+    .replace("궁금한 점이나 이의가 있으신 분은", "궁금한 점이나 이의가\n있으신 분은")
+    .replace("있으신 분은 오픈 리서치", "있으신 분은 오픈\n리서치")
+    .replace("리서치 웹사이트의 [제안하기]에", "리서치 웹사이트의\n[제안하기]에")
+    .replace("[제안하기]에 의견을 남겨주세요.", "[제안하기]에 의견을\n남겨주세요.");
+}
+
 function appendPrintProjectQr(trim, descriptionKey, qrKey, x) {
   appendPrintTextBox(
     trim,
@@ -1538,13 +1550,14 @@ function appendPrintProjectDetails(trim) {
   appendPrintTextBox(
     trim,
     "print-contact-ko description keep-all",
-    META.contact_ko || "",
+    formatContactKo(META.contact_ko || ""),
   );
-  appendPrintTextBox(
+  const contactEn = appendPrintTextBox(
     trim,
-    "print-contact-en description keep-all print-arial",
+    "print-contact-en description print-arial",
     META.contact_en || "",
   );
+  contactEn.lang = "en";
   appendPrintProjectQr(trim, "qrcode_2_description", "qrcode_2", 10);
   appendPrintProjectQr(trim, "qrcode_3_description", "qrcode_3", 65.5);
 }
@@ -1947,12 +1960,11 @@ function renderPrintLayout(items, systemMap = {}) {
     "print-project-description description keep-all",
     META.research_description || "",
   );
-  const projectDescriptionEn = appendPrintTextBox(
+  appendPrintTextBox(
     project.trim,
     "print-project-description-en description keep-all print-arial",
     META.research_description_en || "",
   );
-  positionProjectDescriptionEn(projectDescriptionEn);
   appendPrintProjectDetails(project.trim);
   root.appendChild(project.page);
 

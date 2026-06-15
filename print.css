@@ -343,11 +343,14 @@
   .print-project-description-en {
     position: absolute;
     left: 47mm;
+    top: 58.784mm;
     width: 70mm;
     height: 70mm;
     overflow: hidden;
     font-size: 10pt;
     line-height: 16.4pt;
+    hyphens: auto;
+    overflow-wrap: break-word;
     z-index: 6;
   }
 
@@ -374,8 +377,10 @@
   .print-contact-en {
     top: 128.675mm;
     height: 28.464mm;
+    line-height: 12pt;
     hyphens: auto;
     overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .print-project-qrcode-description {
