@@ -363,6 +363,15 @@ function buildSystemMap(rows) {
   return map;
 }
 
+function updateResearchDescription() {
+  const descriptionText = document.getElementById("descriptionText");
+  if (!descriptionText) return;
+
+  descriptionText.textContent = isMobileNarrowFrame()
+    ? META.research_description_mobile || META.research_description || ""
+    : META.research_description || "";
+}
+
 function applyMeta(meta) {
   document.getElementById("nav-open").textContent =
     meta.nav_open || "오픈";
@@ -388,10 +397,7 @@ function applyMeta(meta) {
   document.getElementById("currentDate").textContent =
     meta.last_update || "";
 
-  const researchDescription = meta.research_description || "";
-
-  const descriptionText = document.getElementById("descriptionText");
-  descriptionText.textContent = researchDescription;
+  updateResearchDescription();
 
   document.title = meta.site_title || "OPEN RESEARCH";
 }
@@ -3003,6 +3009,17 @@ function renderAlphabetTape(tapeRows, patternMap, kerningMap = {}) {
   });
 }
 
+
+function isMobileNarrowFrame() {
+  return window.matchMedia("(max-width: 499px)").matches;
+}
+
+function isMobileLandscapeFrame() {
+  return window.matchMedia(
+    "(max-height: 520px) and (orientation: landscape), (max-width: 920px) and (orientation: landscape)",
+  ).matches;
+}
+
 function finishIntroSequence(alphabetPaper) {
   if (introIsFinishing) return;
 
@@ -3025,6 +3042,12 @@ function finishIntroSequence(alphabetPaper) {
 }
 
 function playIntroSequence() {
+  if (isMobileNarrowFrame() || isMobileLandscapeFrame()) {
+    setBodyMode("mode-open");
+    updateResearchDescription();
+    return;
+  }
+
   if (introHasPlayed || !alphabetTape.children.length) {
     setBodyMode("mode-open");
     return;
@@ -3078,6 +3101,22 @@ function playIntroSequence() {
     introScrollAnimation = requestAnimationFrame(step);
   });
 }
+
+
+window.addEventListener("resize", () => {
+  updateResearchDescription();
+
+  if (!isMobileNarrowFrame() && !isMobileLandscapeFrame()) return;
+  if (!body.classList.contains("mode-intro")) return;
+
+  const alphabetPaper = document.querySelector(".alphabet-section .punch-paper");
+  if (introScrollAnimation) {
+    cancelAnimationFrame(introScrollAnimation);
+    introScrollAnimation = null;
+  }
+  if (alphabetPaper) alphabetPaper.style.transform = "";
+  setBodyMode("mode-open");
+});
 
 window.addEventListener(
   "wheel",
@@ -3197,6 +3236,7 @@ async function initCMS() {
 
     requestAnimationFrame(() => {
       bSuggS.scrollLeft = 0;
+      updateResearchDescription();
       playIntroSequence();
     });
   } catch (err) {
