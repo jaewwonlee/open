@@ -283,11 +283,22 @@ body.mode-opening #bottomSuggestGroup {
   background-color: var(--gray);
 }
 
+.hole.large.clickable-hole:not(.active):not(.hidden-hole):hover {
+  background-color: #fff;
+}
+
 #topTape .hole.clickable-hole:hover,
 body.camera-mask-on #topTape .hole.clickable-hole:hover,
 body.image-mask-on #topTape .hole.clickable-hole:hover {
   background-color: var(--gray);
   cursor: pointer;
+  opacity: 1;
+}
+
+#topTape .hole.large.clickable-hole:not(.active):hover,
+body.camera-mask-on #topTape .hole.large.clickable-hole:not(.active):hover,
+body.image-mask-on #topTape .hole.large.clickable-hole:not(.active):hover {
+  background-color: #fff;
   opacity: 1;
 }
 
@@ -1092,6 +1103,11 @@ body.mode-suggest #nav-compare {
   opacity: 0;
 }
 
+.hole.large.hidden-hole:hover {
+  background-color: #fff;
+  opacity: 1;
+}
+
 /* directionality */
 .hole.move-horizontal {
   animation: moveHorizontal 1.2s ease-in-out infinite alternate;
@@ -1525,4 +1541,3 @@ body.image-mask-on .hole-area .hole.score-hole {
     white-space: pre-line;
   }
 }
-
