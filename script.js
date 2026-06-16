@@ -393,7 +393,7 @@ function applyMeta(meta) {
   const descriptionText = document.getElementById("descriptionText");
   descriptionText.textContent = researchDescription;
 
-  document.title = meta.site_title || "**WELCOME TO OPEN**";
+  document.title = meta.site_title || "OPEN RESEARCH";
 }
 
 function getScreenDescription(text) {
