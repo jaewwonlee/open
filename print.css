@@ -87,11 +87,11 @@
   }
 
   .print-odd:not(.print-front-page) .print-trim-line {
-    right: -0.5mm;
+    right: calc(-0.5mm - 0.25pt);
   }
 
   .print-even:not(.print-front-page) .print-trim-line {
-    left: -0.5mm;
+    left: calc(-0.5mm - 0.25pt);
   }
 
   .print-front-page {
@@ -140,11 +140,11 @@
   }
 
   .print-odd .print-binding-holes {
-    left: 7.5mm;
+    left: 5mm;
   }
 
   .print-even .print-binding-holes {
-    right: 7.5mm;
+    right: 5mm;
   }
 
   .print-binding-hole {

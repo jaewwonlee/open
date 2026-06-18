@@ -1098,7 +1098,7 @@ function appendPrintOddAssistCircles(trim, pageNumber) {
 
   ["0mm", "95.5mm"].forEach((top) => {
     const circles = createPrintOddAssistCircles();
-    circles.style.left = `${getTrimWidth(pageNumber) - 10.5}mm`;
+    circles.style.left = `${getTrimWidth(pageNumber) - 7}mm`;
     circles.style.top = top;
     circles.style.transform = "translateX(-100%)";
     trim.insertBefore(circles, trim.firstChild);
